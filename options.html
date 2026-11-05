@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tatkal Arm — Parameters</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="shell">
+    <!-- Back Navigation Bar -->
+    <div class="options-nav-bar">
+      <button type="button" id="backBtn" class="nav-back-btn" onclick="window.close()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>Back to Extension</span>
+      </button>
+    </div>
+
+    <!-- Impeccable Operate Header -->
+    <header class="app-header">
+      <div class="header-main">
+        <div class="header-title-group">
+          <svg class="header-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          <div class="header-titles">
+            <h1>Tatkal Arm</h1>
+            <p class="header-tagline">Automated IRCTC Race Execution System</p>
+          </div>
+        </div>
+        <div class="engine-indicator">
+          <span class="engine-pulse"></span>
+          <span class="engine-label">LIVE ARMED READY</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <form id="configForm" novalidate autocomplete="off">
+
+        <!-- Panel 0: IRCTC Authentication -->
+        <section class="operate-panel">
+          <div class="panel-header">
+            <h2>IRCTC Authentication</h2>
+            <span class="panel-meta">Used for automated login and session recovery</span>
+          </div>
+
+          <div class="panel-body">
+            <div class="field-grid">
+              <div class="field-group">
+                <label for="userId">IRCTC User ID</label>
+                <input type="text" id="userId" placeholder="Enter IRCTC User ID" spellcheck="false" autocomplete="username">
+              </div>
+              <div class="field-group">
+                <label for="password">IRCTC Password</label>
+                <input type="password" id="password" placeholder="Enter IRCTC Password" autocomplete="current-password">
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 1: Route Parameters -->
+        <section class="operate-panel">
+          <div class="panel-header">
+            <h2>Journey Route & Class</h2>
+            <span class="panel-meta">Timing target: 10:00:00 IST (AC) / 11:00:00 IST (Non-AC) minus 500ms</span>
+          </div>
+
+          <div class="panel-body">
+            <div class="field-grid">
+              <div class="field-group span-2">
+                <label for="travelDate">Travel Date</label>
+                <input type="date" id="travelDate" required>
+                <span class="field-error" id="travelDateError"></span>
+              </div>
+
+              <div class="field-group">
+                <label for="fromStation">Origin Station Code</label>
+                <input type="text" id="fromStation" placeholder="NDLS" maxlength="10" spellcheck="false" required>
+                <span class="field-error" id="fromStationError"></span>
+              </div>
+
+              <div class="field-group">
+                <label for="toStation">Destination Station Code</label>
+                <input type="text" id="toStation" placeholder="MMCT" maxlength="10" spellcheck="false" required>
+                <span class="field-error" id="toStationError"></span>
+              </div>
+
+              <div class="field-group">
+                <label for="journeyClass">Class</label>
+                <select id="journeyClass" required>
+                  <option value="">Select class…</option>
+                  <option value="SL">Sleeper (SL) — 11:00 AM</option>
+                  <option value="3A">AC 3-Tier (3A) — 10:00 AM</option>
+                  <option value="2A">AC 2-Tier (2A) — 10:00 AM</option>
+                  <option value="1A">First AC (1A) — 10:00 AM</option>
+                  <option value="CC">AC Chair Car (CC) — 10:00 AM</option>
+                  <option value="EC">Exec Chair Car (EC) — 10:00 AM</option>
+                  <option value="2S">Second Sitting (2S) — 11:00 AM</option>
+                </select>
+                <span class="field-error" id="journeyClassError"></span>
+              </div>
+
+              <div class="field-group">
+                <label for="trainNumber">Train Number <span class="hint">(optional)</span></label>
+                <input type="text" id="trainNumber" placeholder="12952" maxlength="6">
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 2: Passengers (Dual Strategy) -->
+        <section class="operate-panel">
+          <div class="panel-header">
+            <h2>Passengers</h2>
+            <span class="panel-meta">Matches master list checkboxes or falls back to direct form filling</span>
+          </div>
+
+          <div class="panel-body">
+            <div id="passengerContainer" class="pax-list">
+              <!-- Dynamically rendered passenger rows -->
+            </div>
+            <button type="button" id="addPaxBtn" class="btn-subtle">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Add Passenger</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Panel 3: Contingency Route (FR-14) -->
+        <section class="operate-panel">
+          <div class="panel-header">
+            <h2>Contingency Route <span class="hint">(optional fallback)</span></h2>
+            <span class="panel-meta">If primary quota gets REGRET, retries once after 2,000ms</span>
+          </div>
+
+          <div class="panel-body">
+            <div class="field-grid">
+              <div class="field-group">
+                <label for="fallbackFrom">Fallback Origin</label>
+                <input type="text" id="fallbackFrom" placeholder="NZM" maxlength="10" spellcheck="false">
+              </div>
+              <div class="field-group">
+                <label for="fallbackTo">Fallback Destination</label>
+                <input type="text" id="fallbackTo" placeholder="BDTS" maxlength="10" spellcheck="false">
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 4: Payment & Gateway Configuration -->
+        <section class="operate-panel">
+          <div class="panel-header">
+            <h2>Payment & Gateway Configuration</h2>
+            <span class="panel-meta">Automated selection for IRCTC iPay, UPI VPA, NetBanking or Cards</span>
+          </div>
+
+          <div class="panel-body">
+            <div class="field-grid">
+              <div class="field-group">
+                <label for="paymentMethod">Preferred Payment Mode</label>
+                <select id="paymentMethod">
+                  <option value="ewallet" selected>⚡ IRCTC eWallet (Fastest — Zero Bank Gateway Latency)</option>
+                  <option value="ipay">IRCTC iPay (UPI / Direct Gateway — Recommended)</option>
+                  <option value="upi">BHIM / UPI (Auto-Select & Enter VPA)</option>
+                  <option value="cards">Payment Gateway / Credit & Debit Cards</option>
+                  <option value="netbanking">Net Banking (Direct Bank Gateway)</option>
+                </select>
+              </div>
+
+              <div class="field-group" id="optWrapEwalletPin">
+                <label for="ewalletPin">eWallet Transaction Password <span class="hint">(optional)</span></label>
+                <input type="password" id="ewalletPin" placeholder="Transaction Password" autocomplete="off">
+              </div>
+
+              <div class="field-group" id="optWrapUpiId">
+                <label for="upiId">UPI VPA ID <span class="hint">(e.g. username@oksbi)</span></label>
+                <input type="text" id="upiId" placeholder="username@oksbi" spellcheck="false">
+              </div>
+            </div>
+
+            <div class="field-grid" style="margin-top: 14px;">
+              <div class="field-group" id="optWrapBankName">
+                <label for="bankName">Preferred Bank (Net Banking)</label>
+                <select id="bankName">
+                  <option value="SBI">State Bank of India (SBI)</option>
+                  <option value="HDFC">HDFC Bank</option>
+                  <option value="ICICI">ICICI Bank</option>
+                  <option value="AXIS">Axis Bank</option>
+                  <option value="PNB">Punjab National Bank</option>
+                  <option value="KOTAK">Kotak Mahindra Bank</option>
+                  <option value="OTHER">Other Supported Bank</option>
+                </select>
+              </div>
+
+              <div class="field-group" id="optWrapCardNumber">
+                <label for="cardNumber">Card Number <span class="hint">(optional)</span></label>
+                <input type="text" id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" maxlength="19">
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 5: Execution Profile -->
+        <section class="operate-panel">
+          <div class="panel-header">
+            <h2>Execution Profile</h2>
+            <span class="panel-meta">Safety gate and testing mode</span>
+          </div>
+
+          <div class="panel-body">
+            <div class="toggle-row">
+              <div class="toggle-meta">
+                <span class="toggle-heading">Dry-Run Test Fuse Simulator</span>
+                <span class="toggle-desc">Substitutes the 10:00/11:00 IST quota trigger with an immediate 10s fuse and stops before final Pay.</span>
+              </div>
+              <label class="switch-control">
+                <input type="checkbox" id="dryRun">
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+
+            <div id="liveBanner" class="alert-box alert-live">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              <div class="alert-text">
+                <strong>REAL LIVE BOOKING IS ACTIVE</strong>
+                <p>The extension will trigger search at T−0.5s of the Tatkal quota, handle the captcha pause, auto-select iPay, and click Pay.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Dock Actions -->
+        <div class="dock-actions">
+          <button type="submit" id="saveBtn" class="btn-primary">
+            Save Configuration
+          </button>
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <div id="toastRoot" class="toast-stack"></div>
+
+  <script src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Tatkal Arm</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+  <div class="popup-viewport">
+
+    <!-- Top Brand & Navigation Header -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="logo-wrapper">
+          <img src="icons/icon48.png" alt="Tatkal Arm" class="app-logo">
+        </div>
+        <div class="header-titles">
+          <div class="brand-row">
+            <span class="app-title">Tatkal Arm</span>
+            <span class="live-dot" title="Live Engine Ready"></span>
+          </div>
+          <span id="targetBadge" class="target-badge">11:00 AM Non-AC</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button type="button" id="toggleConfigBtn" class="nav-btn" aria-label="Open Settings"
+          title="Configure Route, Passengers & Payment">
+          <svg class="sf-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+            </path>
+          </svg>
+          <span>Settings</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- VIEWS STACK (Spatial Left/Right Transitions) -->
+    <div class="views-stack">
+
+      <!-- VIEW 1: MAIN OPERATE DASHBOARD -->
+      <main id="monitorView" class="view view-active">
+
+        <!-- IRCTC Quick Auto-Login Material -->
+        <section class="card login-card">
+          <div class="card-header-row">
+            <div class="title-with-icon">
+              <svg class="icon-lime" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              <span class="section-label">IRCTC Authentication</span>
+            </div>
+            <span class="badge-subtle">Auto Sign In</span>
+          </div>
+          <div class="login-inputs-wrap">
+            <input type="text" id="quickUserId" placeholder="User ID" spellcheck="false" autocomplete="username">
+            <input type="password" id="quickPassword" placeholder="Password" autocomplete="current-password">
+          </div>
+          <div class="login-actions-row">
+            <button type="button" id="autoLoginBtn" class="btn btn-secondary-dark login-btn-sub"
+              title="Populate credentials into IRCTC login dialog">
+              Fill Credentials
+            </button>
+            <button type="button" id="signInSubmitBtn" class="btn btn-lime-sm login-btn-main"
+              title="Immediately click SIGN IN button on IRCTC modal">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              <span>Sign In ➔</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Precision Countdown Card (Theme Hero) -->
+        <section class="card clock-card">
+          <div class="card-header-row">
+            <span class="section-label">Opening Countdown</span>
+            <span id="targetHourLabel" class="target-sublabel">11:00:00 IST (T−0.5s)</span>
+          </div>
+          <div class="clock-display-wrap">
+            <div id="countdownDigits" class="clock-digits">00:00:00</div>
+          </div>
+          <div class="clock-metadata-row">
+            <div class="meta-indicator">
+              <span class="pulse-beacon"></span>
+              <span id="clockSyncStatus" class="meta-caption">Atomic Sync: Active</span>
+            </div>
+            <span id="activePageBadge" class="page-indicator">Checking Page…</span>
+          </div>
+        </section>
+
+        <!-- 1-Click Operations Grid -->
+        <section class="card modules-card">
+          <div class="card-header-row">
+            <span class="section-label">Instant Operations</span>
+            <span class="badge-subtle">1-Click Live</span>
+          </div>
+
+          <!-- Hero 1-Click Page Auto-Fill -->
+          <button type="button" id="btnActAutoFillPage" class="btn btn-hero-autofill"
+            title="Smartly fills whatever page is open: Search, Train List, Passengers, or Payment">
+            <div class="hero-autofill-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+            </div>
+            <div class="hero-autofill-text">
+              <span class="hero-autofill-title">⚡ Auto-Fill Current Page</span>
+              <span class="hero-autofill-sub">Route • Quota • Class • Passengers</span>
+            </div>
+          </button>
+
+          <div class="modules-grid">
+            <button type="button" id="btnActTatkal" class="btn module-btn"
+              title="Select TATKAL Quota dropdown on search or train-list">
+              <div class="module-icon-wrap">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+              </div>
+              <div class="module-text">
+                <span class="module-title">Tatkal Quota</span>
+                <span class="module-sub">Select dropdown</span>
+              </div>
+            </button>
+
+            <button type="button" id="btnActClass" class="btn module-btn"
+              title="Click Class box (e.g. SL or 3A), check availability, and click Book Now">
+              <div class="module-icon-wrap">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="4" y="3" width="16" height="16" rx="2"></rect>
+                  <path d="M4 11h16"></path>
+                  <path d="M12 3v8"></path>
+                  <path d="m8 19-2 3"></path>
+                  <path d="m16 19 2 3"></path>
+                </svg>
+              </div>
+              <div class="module-text">
+                <span id="btnActClassLabel" class="module-title">Click SL Seats</span>
+                <span class="module-sub">Enquire & Book</span>
+              </div>
+            </button>
+
+            <button type="button" id="btnActPassengers" class="btn module-btn"
+              title="Click + Add Passenger, fill names, ages, gender, berth preference">
+              <div class="module-icon-wrap">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+              </div>
+              <div class="module-text">
+                <span class="module-title">Passengers</span>
+                <span class="module-sub">Autofill details</span>
+              </div>
+            </button>
+
+            <button type="button" id="btnActPay" class="btn module-btn"
+              title="Auto-Select IRCTC eWallet, iPay, or UPI and trigger Pay & Book">
+              <div class="module-icon-wrap icon-lime-bg">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                  <line x1="1" y1="10" x2="23" y2="10"></line>
+                </svg>
+              </div>
+              <div class="module-text">
+                <span id="btnActPayLabel" class="module-title">Auto-Pay (eWallet)</span>
+                <span id="btnActPaySub" class="module-sub">Instant Booking ⚡</span>
+              </div>
+            </button>
+
+            <button type="button" id="btnActJourney" class="btn module-btn full-span-btn"
+              title="Prefill From, To, Tomorrow Date, Class, and Quota">
+              <div class="module-icon-wrap">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+              </div>
+              <div class="module-text">
+                <span class="module-title">Prefill Journey (Tomorrow)</span>
+                <span class="module-sub">Origin, Destination & Tomorrow Date</span>
+              </div>
+            </button>
+          </div>
+        </section>
+
+        <!-- Transit Ticket / Boarding Card (Design System Trip Card Style) -->
+        <section class="card ticket-card">
+          <div class="ticket-route-row">
+            <div class="station-col">
+              <span class="station-meta-label">ORIGIN</span>
+              <span id="fromCode" class="station-hero">NDLS</span>
+            </div>
+            <div class="transit-track">
+              <div class="track-line"></div>
+              <div class="track-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </div>
+            </div>
+            <div class="station-col right">
+              <span class="station-meta-label">DESTINATION</span>
+              <span id="toCode" class="station-hero">MMCT</span>
+            </div>
+          </div>
+
+          <div class="ticket-meta-strip">
+            <div class="ticket-meta-cell">
+              <span class="meta-label">Date</span>
+              <span id="travelDateVal" class="meta-val">—</span>
+            </div>
+            <div class="ticket-meta-cell">
+              <span class="meta-label">Class</span>
+              <span id="classVal" class="meta-val">SL Tatkal</span>
+            </div>
+            <div class="ticket-meta-cell">
+              <span class="meta-label">Train</span>
+              <span id="trainVal" class="meta-val">Any</span>
+            </div>
+            <div class="ticket-meta-cell">
+              <span class="meta-label">Pax</span>
+              <span id="paxCountVal" class="meta-val">0 Saved</span>
+            </div>
+            <div class="ticket-meta-cell">
+              <span class="meta-label">Pay</span>
+              <span id="paymentVal" class="meta-val">iPay (UPI)</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Live Engine Status Strip -->
+        <section class="card status-strip">
+          <div id="statusDot" class="status-indicator ready"></div>
+          <div class="status-copy">
+            <span id="statusTitle" class="status-heading">Engine Standing By</span>
+            <span id="statusSubtitle" class="status-caption">Ready for live booking execution</span>
+          </div>
+        </section>
+
+        <!-- Execution Timeline (Telemetry Track) -->
+        <section id="timelineSection" class="card timeline-card hidden">
+          <div class="card-header-row">
+            <span class="section-label">Execution Milestones</span>
+            <span id="elapsedTimer" class="timer-tag">0.0ms</span>
+          </div>
+          <div id="timelineLog" class="timeline-stream"></div>
+        </section>
+
+        <!-- Primary Action Buttons (Electric Lime Theme) -->
+        <div class="actions-stack">
+          <button type="button" id="armBtn" class="btn btn-primary-lime">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            <span>ARM FOR TATKAL (T−0.5s)</span>
+          </button>
+          <button type="button" id="runNowBtn" class="btn btn-secondary-dark">
+            <span>RUN ALL NOW (Test / Instant)</span>
+          </button>
+          <button type="button" id="stopBtn" class="btn btn-danger-dark hidden">
+            <span>ABORT RUN</span>
+          </button>
+        </div>
+      </main>
+
+      <!-- VIEW 2: IN-POPUP SETTINGS (WITH EXPLICIT BACK BUTTON) -->
+      <main id="configView" class="view view-hidden">
+        <div class="nav-header-bar">
+          <button type="button" id="backToMonitorBtn" class="btn-back-lime" aria-label="Back to Dashboard">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            <span>Dashboard</span>
+          </button>
+          <span class="nav-header-title">Settings</span>
+        </div>
+
+        <form id="popupConfigForm" class="config-form-scrollable" autocomplete="off">
+
+          <div class="group-wrapper">
+            <span class="group-label">IRCTC Account</span>
+            <div class="group-box">
+              <div class="grouped-field">
+                <label for="cfgUserId">User ID</label>
+                <input type="text" id="cfgUserId" placeholder="IRCTC User ID" spellcheck="false"
+                  autocomplete="username">
+              </div>
+              <div class="group-divider"></div>
+              <div class="grouped-field">
+                <label for="cfgPassword">Password</label>
+                <input type="password" id="cfgPassword" placeholder="Password" autocomplete="current-password">
+              </div>
+            </div>
+          </div>
+
+          <div class="group-wrapper">
+            <span class="group-label">Journey Route</span>
+            <div class="group-box">
+              <div class="grouped-field">
+                <div class="field-label-row">
+                  <label for="cfgDate">Travel Date</label>
+                  <span class="badge-lime-micro">Tomorrow for Tatkal</span>
+                </div>
+                <input type="date" id="cfgDate" required>
+              </div>
+              <div class="group-divider"></div>
+              <div class="grouped-field-row">
+                <div class="grouped-field flex-1">
+                  <label for="cfgFrom">Origin</label>
+                  <input type="text" id="cfgFrom" placeholder="NDLS" maxlength="10" spellcheck="false" required>
+                </div>
+                <div class="grouped-field flex-1">
+                  <label for="cfgTo">Destination</label>
+                  <input type="text" id="cfgTo" placeholder="MMCT" maxlength="10" spellcheck="false" required>
+                </div>
+              </div>
+              <div class="group-divider"></div>
+              <div class="grouped-field-row">
+                <div class="grouped-field flex-1">
+                  <label for="cfgClass">Class</label>
+                  <select id="cfgClass" required>
+                    <option value="SL">SL — Sleeper (11:00 AM)</option>
+                    <option value="3A">3A — AC 3-Tier (10:00 AM)</option>
+                    <option value="2A">2A — AC 2-Tier (10:00 AM)</option>
+                    <option value="1A">First AC (10:00 AM)</option>
+                    <option value="CC">CC — AC Chair Car (10:00 AM)</option>
+                    <option value="EC">EC — Exec Chair Car (10:00 AM)</option>
+                    <option value="2S">2S — Second Sitting (11:00 AM)</option>
+                  </select>
+                </div>
+                <div class="grouped-field flex-1">
+                  <label for="cfgTrain">Train No (optional)</label>
+                  <input type="text" id="cfgTrain" placeholder="12952" maxlength="6">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="group-wrapper">
+            <div class="group-header-with-action">
+              <span class="group-label">Passengers (Max 4)</span>
+              <button type="button" id="btnAddPaxCard" class="btn-text-lime">
+                + Add Passenger
+              </button>
+            </div>
+            <div id="paxCardsContainer" class="pax-group-stack">
+              <!-- Dynamically populated rows -->
+            </div>
+          </div>
+
+          <div class="group-wrapper">
+            <div class="group-header-with-action">
+              <span class="group-label">Payment Information</span>
+              <span class="badge-lime-micro">Automated</span>
+            </div>
+            <div class="group-box">
+              <!-- Visual Interactive Payment Mode Selector (No Clunky Dropdown!) -->
+              <div class="payment-modes-grid" id="paymentModePills">
+                <div class="payment-mode-pill full-width active" data-mode="ewallet">
+                  <div class="pill-title-row">
+                    <span class="pill-title">⚡ IRCTC eWallet</span>
+                    <span class="pill-badge badge-fastest">Fastest Tatkal</span>
+                  </div>
+                  <span class="pill-desc">Direct on-site wallet balance. Zero bank redirect latency.</span>
+                </div>
+                <div class="payment-mode-pill" data-mode="ipay">
+                  <div class="pill-title-row">
+                    <span class="pill-title">IRCTC iPay</span>
+                    <span class="pill-badge badge-sub">Direct</span>
+                  </div>
+                  <span class="pill-desc">Cards, UPI & NetBanking</span>
+                </div>
+                <div class="payment-mode-pill" data-mode="upi">
+                  <div class="pill-title-row">
+                    <span class="pill-title">BHIM / UPI</span>
+                    <span class="pill-badge badge-sub">Auto VPA</span>
+                  </div>
+                  <span class="pill-desc">VPA request to PhonePe/GPay</span>
+                </div>
+                <div class="payment-mode-pill" data-mode="cards">
+                  <div class="pill-title-row">
+                    <span class="pill-title">Credit / Debit</span>
+                    <span class="pill-badge badge-sub">Cards</span>
+                  </div>
+                  <span class="pill-desc">Gateway Card payment</span>
+                </div>
+                <div class="payment-mode-pill" data-mode="netbanking">
+                  <div class="pill-title-row">
+                    <span class="pill-title">Net Banking</span>
+                    <span class="pill-badge badge-sub">Banks</span>
+                  </div>
+                  <span class="pill-desc">SBI, HDFC, ICICI, etc.</span>
+                </div>
+              </div>
+
+              <!-- Synced Select for programmatic compatibility -->
+              <select id="cfgPaymentMethod" style="display: none;">
+                <option value="ewallet" selected>IRCTC eWallet</option>
+                <option value="ipay">IRCTC iPay</option>
+                <option value="upi">BHIM / UPI</option>
+                <option value="cards">Credit / Debit Cards</option>
+                <option value="netbanking">Net Banking</option>
+              </select>
+
+              <!-- eWallet Settings -->
+              <div id="wrapEwallet">
+                <div class="grouped-field">
+                  <div class="field-label-row">
+                    <label for="cfgEwalletPin">eWallet Transaction Password</label>
+                    <span class="hint-label">Auto-Fills on Gateway</span>
+                  </div>
+                  <input type="password" id="cfgEwalletPin" placeholder="Transaction Password (optional)" autocomplete="off">
+                </div>
+              </div>
+
+              <!-- UPI VPA Field with Quick Suffix Buttons -->
+              <div id="wrapUpiId" style="display: none;">
+                <div class="grouped-field">
+                  <div class="field-label-row">
+                    <label for="cfgUpiId">UPI VPA ID (Virtual Payment Address)</label>
+                    <span class="hint-label">e.g. name@oksbi</span>
+                  </div>
+                  <input type="text" id="cfgUpiId" placeholder="username@oksbi" spellcheck="false" autocomplete="off">
+                  <div class="upi-chips-row">
+                    <button type="button" class="btn-upi-chip" data-suffix="@okaxis">@okaxis</button>
+                    <button type="button" class="btn-upi-chip" data-suffix="@oksbi">@oksbi</button>
+                    <button type="button" class="btn-upi-chip" data-suffix="@paytm">@paytm</button>
+                    <button type="button" class="btn-upi-chip" data-suffix="@ybl">@ybl</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Net Banking Bank Field -->
+              <div id="wrapNetBanking" style="display: none;">
+                <div class="grouped-field">
+                  <label for="cfgBankName">Bank for Net Banking</label>
+                  <select id="cfgBankName">
+                    <option value="SBI">State Bank of India (SBI)</option>
+                    <option value="HDFC">HDFC Bank</option>
+                    <option value="ICICI">ICICI Bank</option>
+                    <option value="AXIS">Axis Bank</option>
+                    <option value="PNB">Punjab National Bank</option>
+                    <option value="KOTAK">Kotak Mahindra Bank</option>
+                    <option value="OTHER">Other Supported Bank</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Card Details Field -->
+              <div id="wrapCardDetails" style="display: none;">
+                <div class="grouped-field-row">
+                  <div class="grouped-field flex-2">
+                    <label for="cfgCardNumber">Card Number (Optional)</label>
+                    <input type="text" id="cfgCardNumber" placeholder="XXXX XXXX XXXX XXXX" maxlength="19">
+                  </div>
+                  <div class="group-divider-v"></div>
+                  <div class="grouped-field flex-1">
+                    <label for="cfgCardExpiry">MM/YY</label>
+                    <input type="text" id="cfgCardExpiry" placeholder="12/28" maxlength="5">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="group-wrapper">
+            <span class="group-label">Contingency Route (Optional)</span>
+            <div class="group-box">
+              <div class="grouped-field-row">
+                <div class="grouped-field flex-1">
+                  <label for="cfgFallbackFrom">Fallback Origin</label>
+                  <input type="text" id="cfgFallbackFrom" placeholder="NZM" spellcheck="false">
+                </div>
+                <div class="grouped-field flex-1">
+                  <label for="cfgFallbackTo">Fallback Destination</label>
+                  <input type="text" id="cfgFallbackTo" placeholder="BDTS" spellcheck="false">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="group-wrapper">
+            <div class="group-box switch-box">
+              <div class="switch-meta">
+                <span class="switch-title">Dry Run Simulator</span>
+                <span class="switch-desc">10s test countdown, halts before final Pay.</span>
+              </div>
+              <label class="lime-switch">
+                <input type="checkbox" id="cfgDryRun">
+                <span class="slider-lime"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="config-submit-bar">
+            <button type="submit" id="saveConfigBtn" class="btn btn-primary-lime">
+              Save Parameters
+            </button>
+          </div>
+        </form>
+      </main>
+
+    </div><!-- /views-stack -->
+
+    <!-- Floating Error Toast -->
+    <div id="errorAlert" class="floating-toast hidden">
+      <span class="toast-dot"></span>
+      <span id="errorMessage">Error</span>
+    </div>
+
+  </div><!-- /popup-viewport -->
+
+  <script src="popup.js"></script>
+</body>
+
+</html>

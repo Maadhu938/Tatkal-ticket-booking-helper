@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "Tatkal Arm",
+  "version": "1.0.0",
+  "description": "Arms and executes Tatkal booking steps with precision timing",
+  "permissions": [
+    "storage",
+    "declarativeNetRequest",
+    "sidePanel",
+    "tabs"
+  ],
+  "host_permissions": [
+    "*://*.irctc.co.in/*",
+    "https://timeapi.io/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.irctc.co.in/*"],
+      "js": ["selectors.js", "content.js"],
+      "css": ["cosmetic.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Tatkal Arm — Open Side Panel",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "options_page": "options.html",
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "adblock_rules",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  }
+}

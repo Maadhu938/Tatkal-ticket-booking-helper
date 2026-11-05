@@ -1,0 +1,29 @@
+/* cosmetic.css — Hide same-origin ad slots on IRCTC (FR-18) */
+
+/* Common IRCTC ad containers */
+.advertisement,
+.ad-container,
+.ads-section,
+.ad-banner,
+.google-ad,
+div[id^="google_ads"],
+div[id^="div-gpt-ad"],
+ins.adsbygoogle,
+iframe[src*="doubleclick"],
+iframe[src*="googlesyndication"],
+.adsbygoogle,
+.ad-slot,
+.promo-banner,
+.offer-banner,
+div[class*="advertisement"],
+div[class*="ad-wrap"],
+div[class*="ad_wrap"],
+div[class*="sponsored"],
+.ng-ad-container {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  visibility: hidden !important;
+}
+

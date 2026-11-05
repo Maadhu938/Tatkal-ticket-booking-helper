@@ -1,0 +1,28 @@
+# OS & System Artifacts
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+*.tmp
+*.bak
+
+# Chrome Extension internal unpack cache
+_metadata/
+*.crx
+*.pem
+
+# Environment & Secrets Defense-in-Depth
+.env
+.env.*
+*.secret
+*credentials*
+*token*
+*.key
+
+# Editor & Node
+.vscode/
+.idea/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
