@@ -19,7 +19,7 @@ Engineered with Google Antigravity and Impeccable Design engineering standards, 
 
 ---
 
-## <img src="https://api.iconify.design/lucide:layout-dashboard.svg?color=%23d5ff40" width="20" height="20" align="absmiddle" /> Overview & Architecture
+## <img src="assets/icons/dashboard.svg" width="20" height="20" align="absmiddle" /> Overview & Architecture
 
 Tatkal Arm runs as an orchestrated pair:
 1. **Docked Side Panel UI (`popup.html` / `popup.js`)**: An obsidian dark interface with Electric Lime accents, responsive grid cards, live atomic clock drift telemetry, and 1-click execution triggers.
@@ -29,37 +29,37 @@ Tatkal Arm runs as an orchestrated pair:
 
 ---
 
-## <img src="https://api.iconify.design/lucide:sparkles.svg?color=%23d5ff40" width="20" height="20" align="absmiddle" /> Key Features
+## <img src="assets/icons/sparkles.svg" width="20" height="20" align="absmiddle" /> Key Features
 
-### <img src="https://api.iconify.design/lucide:timer.svg?color=%23d5ff40" width="18" height="18" align="absmiddle" /> Atomic Clock Sync & Target Precision Engine
+### <img src="assets/icons/timer.svg" width="18" height="18" align="absmiddle" /> Atomic Clock Sync & Target Precision Engine
 - Queries Indian Standard Time (IST) servers with round-trip latency compensation to establish the true local clock drift.
 - Automatically calculates opening target instants:
   - **AC Classes (1A, 2A, 3A, CC, EC)**: Target instant is `10:00:00 IST - 500ms`.
   - **Non-AC Classes (SL, 2S)**: Target instant is `11:00:00 IST - 500ms`.
   - **Tatkal Date**: Automatically defaults to tomorrow's travel date.
 
-### <img src="https://api.iconify.design/lucide:wallet-cards.svg?color=%23d5ff40" width="18" height="18" align="absmiddle" /> 1-Tap Visual Payment Automation
+### <img src="assets/icons/wallet.svg" width="18" height="18" align="absmiddle" /> 1-Tap Visual Payment Automation
 - **IRCTC eWallet (Recommended for Tatkal)**: Automatically selects on-site IRCTC eWallet on the payment gateway, bypassing slow external bank redirects and 3D-Secure timeouts. Optionally auto-fills the transaction password/PIN.
 - **IRCTC iPay**: Direct payment gateway selection with auto-tabbing for UPI or Cards.
 - **BHIM / UPI**: Automatically selects BHIM/UPI and populates your configured Virtual Payment Address (VPA) with quick suffix chips (`@okaxis`, `@oksbi`, `@paytm`, `@ybl`).
 - **NetBanking & Cards**: Pre-selects preferred banks (SBI, HDFC, ICICI, etc.) or card details.
 - **Passenger Page Payment Mode**: Intelligently toggles UPI (₹20 + GST) vs Cards (₹30 + GST) on `/psgninput`.
 
-### <img src="https://api.iconify.design/lucide:users-round.svg?color=%23d5ff40" width="18" height="18" align="absmiddle" /> High-Speed Passenger Injection
+### <img src="assets/icons/users.svg" width="18" height="18" align="absmiddle" /> High-Speed Passenger Injection
 - Supports up to 4 Tatkal passengers with name, age, gender, and berth preference (Lower, Middle, Upper, Side Lower, Side Upper, Window).
 - **Dual Strategy**: Matches and ticks pre-saved IRCTC Master List checkboxes; if not present, dynamically triggers the `+ Add Passenger` button and dispatches native keyboard events to Angular form controls.
 
-### <img src="https://api.iconify.design/lucide:shield-check.svg?color=%23d5ff40" width="18" height="18" align="absmiddle" /> Network Ad & Tracker Shield
+### <img src="assets/icons/shield.svg" width="18" height="18" align="absmiddle" /> Network Ad & Tracker Shield
 - Uses Chrome Manifest V3 `declarativeNetRequest` rules to eliminate heavy third-party tracking scripts, video banners, and ad networks (Google AdSense, DoubleClick, Taboola, Outbrain, Criteo, Automatad, etc.) on IRCTC domain.
 - Prevents main-thread UI stutter when thousands of concurrent users overload IRCTC servers.
 
-### <img src="https://api.iconify.design/lucide:flask-conical.svg?color=%23d5ff40" width="18" height="18" align="absmiddle" /> Dry-Run Test Simulator
+### <img src="assets/icons/flask.svg" width="18" height="18" align="absmiddle" /> Dry-Run Test Simulator
 - Built-in test fuse simulates the complete booking sequence with an immediate 10-second countdown.
 - Runs all selectors, form fills, and gateway selections, then safely halts before final payment submission for testing.
 
 ---
 
-## <img src="https://api.iconify.design/lucide:lock.svg?color=%23d5ff40" width="20" height="20" align="absmiddle" /> Privacy & Security Architecture
+## <img src="assets/icons/lock.svg" width="20" height="20" align="absmiddle" /> Privacy & Security Architecture
 
 - **No Remote Credentials**: All passwords, user IDs, and travel configurations are stored locally on your machine via `chrome.storage.local`.
 - **Zero External Telemetry**: No user inputs, credentials, or personal travel data are ever transmitted to third-party servers.
@@ -67,7 +67,7 @@ Tatkal Arm runs as an orchestrated pair:
 
 ---
 
-## <img src="https://api.iconify.design/lucide:folder-tree.svg?color=%23d5ff40" width="20" height="20" align="absmiddle" /> Project Structure
+## <img src="assets/icons/folder.svg" width="20" height="20" align="absmiddle" /> Project Structure
 
 ```text
 TatkalArm/
@@ -83,6 +83,7 @@ TatkalArm/
 ├── options.html         # Full-screen Impeccable Operate settings view
 ├── options.css          # Dedicated settings styling & typography
 ├── options.js           # Options controller & validation
+├── assets/icons/        # Vector theme SVG icons for documentation
 ├── icons/               # High-res extension icons (16, 32, 48, 128px)
 ├── LICENSE              # MIT License
 └── README.md            # Documentation & user guide
@@ -90,7 +91,7 @@ TatkalArm/
 
 ---
 
-## <img src="https://api.iconify.design/lucide:download.svg?color=%23d5ff40" width="20" height="20" align="absmiddle" /> Installation Instructions
+## <img src="assets/icons/download.svg" width="20" height="20" align="absmiddle" /> Installation Instructions
 
 1. Clone or download this repository:
    ```bash
@@ -107,7 +108,7 @@ TatkalArm/
 
 ---
 
-## <img src="https://api.iconify.design/lucide:sliders-horizontal.svg?color=%23d5ff40" width="20" height="20" align="absmiddle" /> Configuration & Usage
+## <img src="assets/icons/sliders.svg" width="20" height="20" align="absmiddle" /> Configuration & Usage
 
 1. Open the **Tatkal Arm** side panel.
 2. Click the **Configure** button in the top navigation bar.
@@ -122,12 +123,12 @@ TatkalArm/
 
 ---
 
-## <img src="https://api.iconify.design/lucide:info.svg?color=%23d5ff40" width="20" height="20" align="absmiddle" /> Disclaimer
+## <img src="assets/icons/info.svg" width="20" height="20" align="absmiddle" /> Disclaimer
 
 This project is an open-source tool developed for educational, accessibility, and personal booking assistance purposes. It automates legitimate user input within the browser environment. Users are advised to adhere to IRCTC's terms of service and ticketing guidelines.
 
 ---
 
-## <img src="https://api.iconify.design/lucide:scale.svg?color=%23d5ff40" width="20" height="20" align="absmiddle" /> License
+## <img src="assets/icons/scale.svg" width="20" height="20" align="absmiddle" /> License
 
 This project is licensed under the [MIT License](LICENSE).
