@@ -88,20 +88,38 @@ function computeTarget(config) {
 
 /* ── Find IRCTC Tab Helper ──────────────────────────────────────────── */
 
-async function getIRCTCTab() {
+async function getIRCTCTab(preferredSite = null) {
   try {
-    // 1. Check current window for an IRCTC tab first (ideal for Side Panel)
+    const marker = preferredSite === 'nget' ? '/nget/' : (preferredSite === 'eticket' ? '/eticket/' : null);
+
+    // 1. Check current window for matching portal tab first
     const windowTabs = await chrome.tabs.query({ currentWindow: true });
-    const irctcInWindow = windowTabs.find(t => t.url && t.url.includes('irctc.co.in'));
-    if (irctcInWindow) return irctcInWindow;
+    if (marker) {
+      const matchInWindow = windowTabs.find(t => t.url && t.url.includes(marker));
+      if (matchInWindow) return matchInWindow;
+    }
+    const anyInWindow = windowTabs.find(t => t.url && t.url.includes('irctc.co.in'));
+    if (anyInWindow) return anyInWindow;
 
     // 2. Try active tab across all windows
     const activeTabs = await chrome.tabs.query({ url: '*://*.irctc.co.in/*', active: true });
-    if (activeTabs.length > 0) return activeTabs[0];
+    if (activeTabs.length > 0) {
+      if (marker) {
+        const matchActive = activeTabs.find(t => t.url && t.url.includes(marker));
+        if (matchActive) return matchActive;
+      }
+      return activeTabs[0];
+    }
 
     // 3. Try any tab with url match
     const allTabs = await chrome.tabs.query({ url: '*://*.irctc.co.in/*' });
-    if (allTabs.length > 0) return allTabs[0];
+    if (allTabs.length > 0) {
+      if (marker) {
+        const match = allTabs.find(t => t.url && t.url.includes(marker));
+        if (match) return match;
+      }
+      return allTabs[0];
+    }
 
     // 4. Fallback search all open tabs
     const allAnyTabs = await chrome.tabs.query({});
@@ -129,7 +147,7 @@ async function handleMessage(msg, sender) {
       const cfg = await loadConfig();
       if (!cfg) return { ok: false, error: 'No config saved. Open Settings to configure.' };
 
-      const tab = await getIRCTCTab();
+      const tab = await getIRCTCTab(cfg.bookingSite);
       if (!tab) return { ok: false, error: 'No IRCTC tab found. Open irctc.co.in first.' };
       activeTabId = tab.id;
 
@@ -169,7 +187,7 @@ async function handleMessage(msg, sender) {
       const cfg = await loadConfig();
       if (!cfg) return { ok: false, error: 'No config saved. Open Settings to configure.' };
 
-      const tab = await getIRCTCTab();
+      const tab = await getIRCTCTab(cfg.bookingSite);
       if (!tab) return { ok: false, error: 'No IRCTC tab found. Open irctc.co.in first.' };
       activeTabId = tab.id;
 
@@ -222,7 +240,8 @@ async function handleMessage(msg, sender) {
     /* ── Forward Direct Actions to Active IRCTC Tab ── */
 
     case 'FORWARD_ACTION': {
-      const tab = await getIRCTCTab();
+      const cfg = await loadConfig();
+      const tab = await getIRCTCTab(cfg?.bookingSite);
       if (!tab) return { success: false, error: 'No active IRCTC tab found. Please open irctc.co.in.' };
       try {
         const response = await chrome.tabs.sendMessage(tab.id, msg.payload);
@@ -247,9 +266,81 @@ async function handleMessage(msg, sender) {
       return { ok: true };
     }
 
+    case 'SCHEDULE_ALARM': {
+      const cfg = await loadConfig();
+      const res = await scheduleTatkalAlarm(cfg);
+      return { ok: true, ...res };
+    }
+
     default:
       return { ok: false, error: `Unknown message type: ${msg.type}` };
   }
+}
+
+/* ── Chrome Alarms Scheduler ────────────────────────────────────────── */
+
+function getNextTatkalTime(isAc = false) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).formatToParts(new Date());
+
+  const get = (type) => Number(parts.find((p) => p.type === type)?.value || 0);
+  let year = get('year');
+  let month = get('month');
+  let day = get('day');
+  const nowSeconds = get('hour') * 3600 + get('minute') * 60 + get('second');
+
+  // Pre-warm alarm fires 60 seconds before Tatkal quota opening (09:59 AM for AC, 10:59 AM for Non-AC)
+  const targetHour = isAc ? 9 : 10;
+  const targetMinute = 59;
+  const targetSeconds = targetHour * 3600 + targetMinute * 60;
+
+  if (nowSeconds >= targetSeconds) {
+    const nextDay = new Date(Date.UTC(year, month - 1, day + 1));
+    year = nextDay.getUTCFullYear();
+    month = nextDay.getUTCMonth() + 1;
+    day = nextDay.getUTCDate();
+  }
+
+  const pad = (n) => String(n).padStart(2, '0');
+  return new Date(`${year}-${pad(month)}-${pad(day)}T${pad(targetHour)}:${pad(targetMinute)}:00+05:30`).getTime();
+}
+
+async function scheduleTatkalAlarm(config) {
+  if (!chrome.alarms) return null;
+  const isAc = AC_CLASSES.has(config?.journeyClass);
+  const alarmName = isAc ? 'tatkal-prewarm-ac' : 'tatkal-prewarm-non-ac';
+  await chrome.alarms.clear('tatkal-prewarm-ac');
+  await chrome.alarms.clear('tatkal-prewarm-non-ac');
+
+  const when = getNextTatkalTime(isAc);
+  await chrome.alarms.create(alarmName, { when });
+  log(`Pre-warm alarm scheduled: ${alarmName} at ${new Date(when).toLocaleString()}`);
+  return { alarmName, when };
+}
+
+if (chrome.alarms && chrome.alarms.onAlarm) {
+  chrome.alarms.onAlarm.addListener(async (alarm) => {
+    if (alarm.name && alarm.name.startsWith('tatkal-prewarm')) {
+      const cfg = await loadConfig();
+      const site = cfg?.bookingSite === 'nget' ? 'nget' : 'eticket';
+      const targetUrl = `https://www.irctc.co.in/${site}/train-search`;
+      log(`Tatkal pre-warm alarm fired! Preparing IRCTC tab on ${site}…`, alarm.name);
+      let tab = await getIRCTCTab(site);
+      if (!tab) {
+        await chrome.tabs.create({ url: targetUrl, active: true });
+      } else {
+        await chrome.tabs.update(tab.id, { active: true });
+      }
+    }
+  });
 }
 
 function broadcastToPopup(msg) {
@@ -257,8 +348,12 @@ function broadcastToPopup(msg) {
 }
 
 async function loadConfig() {
-  const data = await chrome.storage.local.get('config');
-  return data.config || null;
+  const data = await chrome.storage.local.get(['config', 'tatkal_config']);
+  const cfg = data.config || data.tatkal_config || null;
+  if (cfg && cfg.bookOnlyIfCnf === undefined) {
+    cfg.bookOnlyIfCnf = true;
+  }
+  return cfg;
 }
 
 chrome.runtime.onInstalled.addListener(async () => {
@@ -272,8 +367,9 @@ chrome.runtime.onInstalled.addListener(async () => {
     await chrome.storage.local.set({
       config: {
         journeyClass: 'SL',
-        fromStation: 'NDLS',
-        toStation: 'MMCT',
+        fromStation: '',
+        toStation: '',
+        bookOnlyIfCnf: true,
         dryRun: false
       },
       _armed: false,

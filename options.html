@@ -74,6 +74,15 @@
           <div class="panel-body">
             <div class="field-grid">
               <div class="field-group span-2">
+                <label for="bookingSite">IRCTC Website Portal</label>
+                <select id="bookingSite">
+                  <option value="eticket" selected>Beta — eticket (Modern Next-Gen Portal)</option>
+                  <option value="nget">Classic — nget (Standard IRCTC Portal)</option>
+                </select>
+                <span class="hint" style="margin-top: 4px; display: block;">Selects target IRCTC portal for search, pre-warm alarms, and navigation</span>
+              </div>
+
+              <div class="field-group span-2">
                 <label for="travelDate">Travel Date</label>
                 <input type="date" id="travelDate" required>
                 <span class="field-error" id="travelDateError"></span>
@@ -81,13 +90,13 @@
 
               <div class="field-group">
                 <label for="fromStation">Origin Station Code</label>
-                <input type="text" id="fromStation" placeholder="NDLS" maxlength="10" spellcheck="false" required>
+                <input type="text" id="fromStation" placeholder="e.g. NDLS (Origin Station Code)" maxlength="10" spellcheck="false" required>
                 <span class="field-error" id="fromStationError"></span>
               </div>
 
               <div class="field-group">
                 <label for="toStation">Destination Station Code</label>
-                <input type="text" id="toStation" placeholder="MMCT" maxlength="10" spellcheck="false" required>
+                <input type="text" id="toStation" placeholder="e.g. MMCT (Destination Station Code)" maxlength="10" spellcheck="false" required>
                 <span class="field-error" id="toStationError"></span>
               </div>
 
@@ -108,7 +117,20 @@
 
               <div class="field-group">
                 <label for="trainNumber">Train Number <span class="hint">(optional)</span></label>
-                <input type="text" id="trainNumber" placeholder="12952" maxlength="6">
+                <input type="text" id="trainNumber" placeholder="e.g. 12952 (Optional Train No)" maxlength="6">
+              </div>
+
+              <div class="field-group span-2">
+                <div class="toggle-row" style="margin-top: 8px;">
+                  <div class="toggle-meta">
+                    <span class="toggle-heading">Confirm Berths Only</span>
+                    <span class="toggle-desc">Book ticket only if confirmed Tatkal berths are allotted (avoids RAC/WL).</span>
+                  </div>
+                  <label class="switch-control">
+                    <input type="checkbox" id="bookOnlyIfCnf" checked>
+                    <span class="switch-slider"></span>
+                  </label>
+                </div>
               </div>
             </div>
           </div>
@@ -146,11 +168,11 @@
             <div class="field-grid">
               <div class="field-group">
                 <label for="fallbackFrom">Fallback Origin</label>
-                <input type="text" id="fallbackFrom" placeholder="NZM" maxlength="10" spellcheck="false">
+                <input type="text" id="fallbackFrom" placeholder="e.g. NZM (Optional Contingency Origin)" maxlength="10" spellcheck="false">
               </div>
               <div class="field-group">
                 <label for="fallbackTo">Fallback Destination</label>
-                <input type="text" id="fallbackTo" placeholder="BDTS" maxlength="10" spellcheck="false">
+                <input type="text" id="fallbackTo" placeholder="e.g. BDTS (Optional Contingency Dest)" maxlength="10" spellcheck="false">
               </div>
             </div>
           </div>
@@ -178,12 +200,12 @@
 
               <div class="field-group" id="optWrapEwalletPin">
                 <label for="ewalletPin">eWallet Transaction Password <span class="hint">(optional)</span></label>
-                <input type="password" id="ewalletPin" placeholder="Transaction Password" autocomplete="off">
+                <input type="password" id="ewalletPin" placeholder="Enter eWallet Transaction Password" autocomplete="off">
               </div>
 
               <div class="field-group" id="optWrapUpiId">
                 <label for="upiId">UPI VPA ID <span class="hint">(e.g. username@oksbi)</span></label>
-                <input type="text" id="upiId" placeholder="username@oksbi" spellcheck="false">
+                <input type="text" id="upiId" placeholder="Enter UPI VPA (e.g. yourname@oksbi)" spellcheck="false">
               </div>
             </div>
 
@@ -203,7 +225,22 @@
 
               <div class="field-group" id="optWrapCardNumber">
                 <label for="cardNumber">Card Number <span class="hint">(optional)</span></label>
-                <input type="text" id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" maxlength="19">
+                <input type="text" id="cardNumber" placeholder="Enter 16-Digit Card Number" maxlength="19">
+              </div>
+
+              <div class="field-group" id="optWrapCardExpiry">
+                <label for="cardExpiry">Expiry Date <span class="hint">(MM/YY)</span></label>
+                <input type="text" id="cardExpiry" placeholder="MM/YY (e.g. 08/29)" maxlength="5">
+              </div>
+
+              <div class="field-group" id="optWrapCardName">
+                <label for="cardName">Cardholder Name <span class="hint">(optional)</span></label>
+                <input type="text" id="cardName" placeholder="Name as printed on Card">
+              </div>
+
+              <div class="field-group" id="optWrapCardCvv">
+                <label for="cardCvv">CVV <span class="hint">(optional)</span></label>
+                <input type="password" id="cardCvv" placeholder="CVV (e.g. 123)" maxlength="4">
               </div>
             </div>
           </div>

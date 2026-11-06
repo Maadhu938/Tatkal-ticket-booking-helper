@@ -7,6 +7,7 @@
 /* ── DOM References ─────────────────────────────────────────────────── */
 
 const form               = document.getElementById('configForm');
+const bookingSite        = document.getElementById('bookingSite');
 const userId             = document.getElementById('userId');
 const password           = document.getElementById('password');
 const travelDate         = document.getElementById('travelDate');
@@ -23,6 +24,10 @@ const ewalletPin         = document.getElementById('ewalletPin');
 const upiId              = document.getElementById('upiId');
 const bankName           = document.getElementById('bankName');
 const cardNumber         = document.getElementById('cardNumber');
+const cardExpiry         = document.getElementById('cardExpiry');
+const cardName           = document.getElementById('cardName');
+const cardCvv            = document.getElementById('cardCvv');
+const bookOnlyIfCnf      = document.getElementById('bookOnlyIfCnf');
 const dryRunToggle       = document.getElementById('dryRun');
 const liveBanner         = document.getElementById('liveBanner');
 const toastRoot          = document.getElementById('toastRoot');
@@ -35,6 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const data = await chrome.storage.local.get(['config', 'userId', 'password']);
   const cfg = data.config || {};
 
+  if (bookingSite) bookingSite.value = cfg.bookingSite || 'eticket';
   userId.value       = data.userId || cfg.userId || '';
   password.value     = data.password || cfg.password || '';
   travelDate.value   = cfg.travelDate   || '';
@@ -51,6 +57,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (upiId)         upiId.value         = cfg.upiId || '';
   if (bankName)      bankName.value      = cfg.bankName || 'SBI';
   if (cardNumber)    cardNumber.value    = cfg.cardNumber || '';
+  if (cardExpiry)    cardExpiry.value    = cfg.cardExpiry || '';
+  if (cardName)      cardName.value      = cfg.cardName || '';
+  if (cardCvv)       cardCvv.value       = cfg.cardCvv || '';
+  if (bookOnlyIfCnf) bookOnlyIfCnf.checked = cfg.bookOnlyIfCnf !== false;
 
   // Default LIVE BOOKING
   dryRunToggle.checked = cfg.dryRun === true;
@@ -60,12 +70,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (Array.isArray(cfg.passengers) && cfg.passengers.length > 0) {
     passengers = cfg.passengers.map(p => {
       if (typeof p === 'string') {
-        return { name: p, age: '30', gender: 'M', nationality: 'IN', berthPreference: '' };
+        return { name: p, age: '', gender: 'M', nationality: 'IN', berthPreference: '' };
       }
       return p;
     });
   } else {
-    passengers = [{ name: '', age: '30', gender: 'M', nationality: 'IN', berthPreference: '' }];
+    passengers = [{ name: '', age: '', gender: 'M', nationality: 'IN', berthPreference: '' }];
   }
 
   renderPassengers();
@@ -88,7 +98,7 @@ addPaxBtn.addEventListener('click', () => {
     showToast('Maximum 6 passengers allowed on Tatkal booking', 'error');
     return;
   }
-  passengers.push({ name: '', age: '30', gender: 'M', nationality: 'IN', berthPreference: '' });
+  passengers.push({ name: '', age: '', gender: 'M', nationality: 'IN', berthPreference: '' });
   renderPassengers();
 });
 
@@ -104,8 +114,8 @@ function renderPassengers() {
         ${passengers.length > 1 ? `<button type="button" class="btn-remove-pax" data-index="${index}">✕ Remove</button>` : ''}
       </div>
       <div class="pax-grid">
-        <input type="text" placeholder="Full Name (Master List)" value="${pax.name || ''}" data-field="name" data-index="${index}" spellcheck="false" required>
-        <input type="number" placeholder="Age" min="1" max="120" value="${pax.age || '30'}" data-field="age" data-index="${index}">
+        <input type="text" placeholder="Full Name as per Aadhaar / ID" value="${pax.name || ''}" data-field="name" data-index="${index}" spellcheck="false" required>
+        <input type="number" placeholder="Age" min="1" max="120" value="${pax.age || ''}" data-field="age" data-index="${index}">
         <select data-field="gender" data-index="${index}">
           <option value="M" ${pax.gender === 'M' ? 'selected' : ''}>Male</option>
           <option value="F" ${pax.gender === 'F' ? 'selected' : ''}>Female</option>
@@ -209,7 +219,7 @@ form.addEventListener('submit', async (e) => {
   const validPassengers = passengers
     .map(p => ({
       name: p.name.trim(),
-      age: p.age ? String(p.age).trim() : '30',
+      age: p.age ? String(p.age).trim() : '',
       gender: p.gender || 'M',
       nationality: 'IN',
       berthPreference: p.berthPreference || ''
@@ -217,6 +227,7 @@ form.addEventListener('submit', async (e) => {
     .filter(p => p.name.length > 0);
 
   const config = {
+    bookingSite:   bookingSite ? bookingSite.value : 'eticket',
     userId:        uid,
     password:      pwd,
     travelDate:    travelDate.value,
@@ -232,10 +243,17 @@ form.addEventListener('submit', async (e) => {
     upiId:         upiId ? upiId.value.trim() : '',
     bankName:      bankName ? bankName.value : 'SBI',
     cardNumber:    cardNumber ? cardNumber.value.trim() : '',
+    cardExpiry:    cardExpiry ? cardExpiry.value.trim() : '',
+    cardName:      cardName ? cardName.value.trim() : '',
+    cardCvv:       cardCvv ? cardCvv.value.trim() : '',
+    bookOnlyIfCnf: bookOnlyIfCnf ? bookOnlyIfCnf.checked : true,
     dryRun:        dryRunToggle.checked
   };
 
-  await chrome.storage.local.set({ config });
+  await chrome.storage.local.set({
+    config,
+    tatkal_config: config
+  });
   showToast(config.dryRun ? 'Configuration saved in Test Mode' : 'Parameters Saved — Armed for Live Booking', 'success');
 });
 

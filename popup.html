@@ -24,7 +24,10 @@
             <span class="app-title">Tatkal Arm</span>
             <span class="live-dot" title="Live Engine Ready"></span>
           </div>
-          <span id="targetBadge" class="target-badge">11:00 AM Non-AC</span>
+          <div class="badge-row-header">
+            <span id="targetBadge" class="target-badge">11:00 AM Non-AC</span>
+            <span id="dashPortalPill" class="portal-badge" title="Active IRCTC Portal">Beta • eticket</span>
+          </div>
         </div>
       </div>
       <div class="header-actions">
@@ -62,8 +65,8 @@
             <span class="badge-subtle">Auto Sign In</span>
           </div>
           <div class="login-inputs-wrap">
-            <input type="text" id="quickUserId" placeholder="User ID" spellcheck="false" autocomplete="username">
-            <input type="password" id="quickPassword" placeholder="Password" autocomplete="current-password">
+            <input type="text" id="quickUserId" placeholder="Enter IRCTC User ID" spellcheck="false" autocomplete="username">
+            <input type="password" id="quickPassword" placeholder="Enter IRCTC Password" autocomplete="current-password">
           </div>
           <div class="login-actions-row">
             <button type="button" id="autoLoginBtn" class="btn btn-secondary-dark login-btn-sub"
@@ -305,17 +308,33 @@
         <form id="popupConfigForm" class="config-form-scrollable" autocomplete="off">
 
           <div class="group-wrapper">
+            <div class="group-header-with-action">
+              <span class="group-label">IRCTC Website Portal</span>
+              <span class="badge-lime-micro" id="portalActiveTag">Beta eticket</span>
+            </div>
+            <div class="group-box">
+              <div class="grouped-field">
+                <label for="cfgBookingSite">Portal Version</label>
+                <select id="cfgBookingSite">
+                  <option value="eticket" selected>Beta — eticket (Modern Next-Gen Portal)</option>
+                  <option value="nget">Classic — nget (Standard IRCTC Portal)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="group-wrapper">
             <span class="group-label">IRCTC Account</span>
             <div class="group-box">
               <div class="grouped-field">
                 <label for="cfgUserId">User ID</label>
-                <input type="text" id="cfgUserId" placeholder="IRCTC User ID" spellcheck="false"
+                <input type="text" id="cfgUserId" placeholder="Enter IRCTC User ID" spellcheck="false"
                   autocomplete="username">
               </div>
               <div class="group-divider"></div>
               <div class="grouped-field">
                 <label for="cfgPassword">Password</label>
-                <input type="password" id="cfgPassword" placeholder="Password" autocomplete="current-password">
+                <input type="password" id="cfgPassword" placeholder="Enter IRCTC Password" autocomplete="current-password">
               </div>
             </div>
           </div>
@@ -334,11 +353,11 @@
               <div class="grouped-field-row">
                 <div class="grouped-field flex-1">
                   <label for="cfgFrom">Origin</label>
-                  <input type="text" id="cfgFrom" placeholder="NDLS" maxlength="10" spellcheck="false" required>
+                  <input type="text" id="cfgFrom" placeholder="e.g. NDLS (Origin Station Code)" maxlength="10" spellcheck="false" required>
                 </div>
                 <div class="grouped-field flex-1">
                   <label for="cfgTo">Destination</label>
-                  <input type="text" id="cfgTo" placeholder="MMCT" maxlength="10" spellcheck="false" required>
+                  <input type="text" id="cfgTo" placeholder="e.g. MMCT (Destination Station Code)" maxlength="10" spellcheck="false" required>
                 </div>
               </div>
               <div class="group-divider"></div>
@@ -357,7 +376,7 @@
                 </div>
                 <div class="grouped-field flex-1">
                   <label for="cfgTrain">Train No (optional)</label>
-                  <input type="text" id="cfgTrain" placeholder="12952" maxlength="6">
+                  <input type="text" id="cfgTrain" placeholder="e.g. 12952 (Optional Train No)" maxlength="6">
                 </div>
               </div>
             </div>
@@ -436,7 +455,7 @@
                     <label for="cfgEwalletPin">eWallet Transaction Password</label>
                     <span class="hint-label">Auto-Fills on Gateway</span>
                   </div>
-                  <input type="password" id="cfgEwalletPin" placeholder="Transaction Password (optional)" autocomplete="off">
+                  <input type="password" id="cfgEwalletPin" placeholder="Enter eWallet Transaction Password (optional)" autocomplete="off">
                 </div>
               </div>
 
@@ -447,7 +466,7 @@
                     <label for="cfgUpiId">UPI VPA ID (Virtual Payment Address)</label>
                     <span class="hint-label">e.g. name@oksbi</span>
                   </div>
-                  <input type="text" id="cfgUpiId" placeholder="username@oksbi" spellcheck="false" autocomplete="off">
+                  <input type="text" id="cfgUpiId" placeholder="Enter UPI VPA ID (e.g. name@oksbi)" spellcheck="false" autocomplete="off">
                   <div class="upi-chips-row">
                     <button type="button" class="btn-upi-chip" data-suffix="@okaxis">@okaxis</button>
                     <button type="button" class="btn-upi-chip" data-suffix="@oksbi">@oksbi</button>
@@ -477,16 +496,42 @@
               <div id="wrapCardDetails" style="display: none;">
                 <div class="grouped-field-row">
                   <div class="grouped-field flex-2">
-                    <label for="cfgCardNumber">Card Number (Optional)</label>
-                    <input type="text" id="cfgCardNumber" placeholder="XXXX XXXX XXXX XXXX" maxlength="19">
+                    <label for="cfgCardNumber">Card Number</label>
+                    <input type="text" id="cfgCardNumber" placeholder="Enter 16-Digit Card Number" maxlength="19">
                   </div>
                   <div class="group-divider-v"></div>
                   <div class="grouped-field flex-1">
                     <label for="cfgCardExpiry">MM/YY</label>
-                    <input type="text" id="cfgCardExpiry" placeholder="12/28" maxlength="5">
+                    <input type="text" id="cfgCardExpiry" placeholder="MM/YY (e.g. 08/29)" maxlength="5">
+                  </div>
+                </div>
+                <div class="group-divider"></div>
+                <div class="grouped-field-row">
+                  <div class="grouped-field flex-2">
+                    <label for="cfgCardName">Name on Card</label>
+                    <input type="text" id="cfgCardName" placeholder="Name as printed on Card">
+                  </div>
+                  <div class="group-divider-v"></div>
+                  <div class="grouped-field flex-1">
+                    <label for="cfgCardCvv">CVV</label>
+                    <input type="password" id="cfgCardCvv" placeholder="CVV (e.g. 123)" maxlength="4">
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div class="group-wrapper">
+            <span class="group-label">Booking Preferences</span>
+            <div class="group-box switch-box">
+              <div class="switch-meta">
+                <span class="switch-title">Confirm Berths Only</span>
+                <span class="switch-desc">Book ticket only if confirmed Tatkal berths are allotted (avoids WL).</span>
+              </div>
+              <label class="lime-switch">
+                <input type="checkbox" id="cfgBookOnlyIfCnf" checked>
+                <span class="slider-lime"></span>
+              </label>
             </div>
           </div>
 
@@ -496,11 +541,11 @@
               <div class="grouped-field-row">
                 <div class="grouped-field flex-1">
                   <label for="cfgFallbackFrom">Fallback Origin</label>
-                  <input type="text" id="cfgFallbackFrom" placeholder="NZM" spellcheck="false">
+                  <input type="text" id="cfgFallbackFrom" placeholder="e.g. NZM (Optional Contingency Origin)" spellcheck="false">
                 </div>
                 <div class="grouped-field flex-1">
                   <label for="cfgFallbackTo">Fallback Destination</label>
-                  <input type="text" id="cfgFallbackTo" placeholder="BDTS" spellcheck="false">
+                  <input type="text" id="cfgFallbackTo" placeholder="e.g. BDTS (Optional Contingency Dest)" spellcheck="false">
                 </div>
               </div>
             </div>

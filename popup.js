@@ -53,6 +53,9 @@ const stopBtn           = document.getElementById('stopBtn');
 
 // Config View Form
 const popupConfigForm   = document.getElementById('popupConfigForm');
+const cfgBookingSite    = document.getElementById('cfgBookingSite');
+const portalActiveTag   = document.getElementById('portalActiveTag');
+const dashPortalPill    = document.getElementById('dashPortalPill');
 const cfgUserId         = document.getElementById('cfgUserId');
 const cfgPassword       = document.getElementById('cfgPassword');
 const cfgDate           = document.getElementById('cfgDate');
@@ -68,6 +71,9 @@ const cfgUpiId          = document.getElementById('cfgUpiId');
 const cfgBankName       = document.getElementById('cfgBankName');
 const cfgCardNumber     = document.getElementById('cfgCardNumber');
 const cfgCardExpiry     = document.getElementById('cfgCardExpiry');
+const cfgCardName       = document.getElementById('cfgCardName');
+const cfgCardCvv        = document.getElementById('cfgCardCvv');
+const cfgBookOnlyIfCnf  = document.getElementById('cfgBookOnlyIfCnf');
 const wrapEwallet       = document.getElementById('wrapEwallet');
 const wrapUpiId         = document.getElementById('wrapUpiId');
 const wrapNetBanking    = document.getElementById('wrapNetBanking');
@@ -121,20 +127,23 @@ async function checkActiveIRCTCPage() {
       payload: { type: 'CHECK_PAGE' }
     });
     if (res && res.success) {
+      const portalLabel = res.portal === 'eticket' ? 'Beta' : (res.portal === 'nget' ? 'Classic' : '');
+      const prefix = portalLabel ? `${portalLabel} • ` : '';
+
       if (res.isPassengerPage) {
-        activePageBadge.textContent = 'Passenger Input';
+        activePageBadge.textContent = `${prefix}Passenger Input`;
         activePageBadge.style.color = 'var(--lime)';
       } else if (res.isTrainListPage) {
-        activePageBadge.textContent = 'Train Results (Live)';
+        activePageBadge.textContent = `${prefix}Train Results`;
         activePageBadge.style.color = 'var(--lime)';
       } else if (res.isSearchPage) {
-        activePageBadge.textContent = 'Train Search';
+        activePageBadge.textContent = `${prefix}Train Search`;
         activePageBadge.style.color = 'var(--stone)';
       } else if (res.hasLoginModal) {
-        activePageBadge.textContent = 'Login Modal Open';
+        activePageBadge.textContent = `${prefix}Login Modal`;
         activePageBadge.style.color = 'var(--lime)';
       } else {
-        activePageBadge.textContent = 'IRCTC Connected';
+        activePageBadge.textContent = `${prefix}Connected`;
         activePageBadge.style.color = 'var(--lime)';
       }
     } else {
@@ -158,22 +167,25 @@ function getTomorrowDateString() {
 
 /* ── Load State & Config ────────────────────────────────────────────── */
 
-async function loadStateAndConfig() {
-  const state = await chrome.runtime.sendMessage({ type: 'GET_STATE' });
-  const cfg = state.config || {};
+function populateFormFromConfig(cfg, state) {
   currentConfig = cfg;
 
   // Sync Credentials
-  const creds = await chrome.storage.local.get(['userId', 'password']);
-  const uid = creds.userId || cfg.userId || '';
-  const pwd = creds.password || cfg.password || '';
+  const uid = cfg.userId || quickUserId.value || '';
+  const pwd = cfg.password || quickPassword.value || '';
 
   quickUserId.value   = uid;
   quickPassword.value = pwd;
   cfgUserId.value     = uid;
   cfgPassword.value   = pwd;
 
-  // Config fields — Standard Tatkal is ALWAYS for Tomorrow!
+  // Dual Portal Selection (Beta eticket vs Classic nget)
+  const site = cfg.bookingSite || 'eticket';
+  if (cfgBookingSite) cfgBookingSite.value = site;
+  if (portalActiveTag) portalActiveTag.textContent = site === 'nget' ? 'Classic nget' : 'Beta eticket';
+  if (dashPortalPill) dashPortalPill.textContent = site === 'nget' ? 'Classic • nget' : 'Beta • eticket';
+
+  // Standard Tatkal is ALWAYS for Tomorrow!
   const todayISO = new Date().toISOString().slice(0, 10);
   const tomorrowISO = getTomorrowDateString();
 
@@ -184,8 +196,8 @@ async function loadStateAndConfig() {
     cfgDate.value = cfg.travelDate;
   }
 
-  cfgFrom.value          = cfg.fromStation || 'NDLS';
-  cfgTo.value            = cfg.toStation || 'MMCT';
+  cfgFrom.value          = cfg.fromStation || '';
+  cfgTo.value            = cfg.toStation || '';
   cfgClass.value         = cfg.journeyClass || 'SL';
   cfgTrain.value         = cfg.trainNumber || '';
   if (cfgPaymentMethod) cfgPaymentMethod.value = cfg.paymentMethod || 'ewallet';
@@ -194,24 +206,43 @@ async function loadStateAndConfig() {
   if (cfgBankName)      cfgBankName.value      = cfg.bankName || 'SBI';
   if (cfgCardNumber)    cfgCardNumber.value    = cfg.cardNumber || '';
   if (cfgCardExpiry)    cfgCardExpiry.value    = cfg.cardExpiry || '';
+  if (cfgCardName)      cfgCardName.value      = cfg.cardName || '';
+  if (cfgCardCvv)       cfgCardCvv.value       = cfg.cardCvv || '';
+  
+  // Book only if confirmed berths allotted defaults to TRUE for Tatkal!
+  if (cfgBookOnlyIfCnf) {
+    cfgBookOnlyIfCnf.checked = cfg.bookOnlyIfCnf !== false;
+  }
+
   cfgFallbackFrom.value  = cfg.fallbackFrom || '';
   cfgFallbackTo.value    = cfg.fallbackTo || '';
   cfgDryRun.checked      = cfg.dryRun === true;
 
   setPaymentMode(cfg.paymentMethod || 'ewallet');
 
-  // Passenger list
+  // Passenger list — leave age empty if new so user types their actual age
   passengersList = Array.isArray(cfg.passengers) && cfg.passengers.length > 0
     ? [...cfg.passengers]
-    : [{ name: '', age: '30', gender: 'M', nationality: 'IN', berthPreference: '' }];
+    : [{ name: '', age: '', gender: 'M', nationality: 'IN', berthPreference: '' }];
 
   renderPassengerCards();
 
   // Populate Monitor
   refreshMonitorFromConfig(cfg, state);
+}
+
+async function loadStateAndConfig() {
+  const state = await chrome.runtime.sendMessage({ type: 'GET_STATE' }).catch(() => ({}));
+  const creds = await chrome.storage.local.get(['config', 'tatkal_config', 'userId', 'password']);
+  const cfg = creds.config || creds.tatkal_config || state?.config || {};
+
+  if (creds.userId && !cfg.userId) cfg.userId = creds.userId;
+  if (creds.password && !cfg.password) cfg.password = creds.password;
+
+  populateFormFromConfig(cfg, state);
 
   // Armed state
-  if (state.armed && state.targetTime) {
+  if (state?.armed && state?.targetTime) {
     targetTime = state.targetTime;
     setArmedUI(state.targetTime);
   } else {
@@ -280,6 +311,14 @@ if (cfgPaymentMethod) {
   });
 }
 
+if (cfgBookingSite) {
+  cfgBookingSite.addEventListener('change', (e) => {
+    const site = e.target.value;
+    if (portalActiveTag) portalActiveTag.textContent = site === 'nget' ? 'Classic nget' : 'Beta eticket';
+    if (dashPortalPill) dashPortalPill.textContent = site === 'nget' ? 'Classic • nget' : 'Beta • eticket';
+  });
+}
+
 // Attach quick UPI suffix chips handlers
 document.querySelectorAll('.btn-upi-chip').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -295,8 +334,8 @@ document.querySelectorAll('.btn-upi-chip').forEach(btn => {
 });
 
 function refreshMonitorFromConfig(cfg, state) {
-  fromCode.textContent = cfg.fromStation || 'NDLS';
-  toCode.textContent   = cfg.toStation || 'MMCT';
+  fromCode.textContent = cfg.fromStation || '---';
+  toCode.textContent   = cfg.toStation || '---';
 
   const dStr = cfg.travelDate || getTomorrowDateString();
   const [y, m, d] = dStr.split('-');
@@ -311,18 +350,19 @@ function refreshMonitorFromConfig(cfg, state) {
   targetHourLabel.textContent = `Opens ${isAc ? '10:00:00' : '11:00:00'} IST (T−0.5s)`;
   btnActClassLabel.textContent = `Click ${cls} Seats`;
 
-  trainVal.textContent = cfg.trainNumber || 'Any';
+  trainVal.textContent = cfg.trainNumber || 'Any Train';
 
   const paxCount = Array.isArray(cfg.passengers) ? cfg.passengers.length : 0;
-  paxCountVal.textContent = `${paxCount} Pax`;
+  paxCountVal.textContent = paxCount > 0 ? `${paxCount} Pax` : '0 Pax';
 
   if (paymentVal) {
-    const pm = cfg.paymentMethod || 'ipay';
-    if (pm === 'ipay') paymentVal.textContent = 'iPay (UPI)';
+    const pm = cfg.paymentMethod || 'ewallet';
+    if (pm === 'ewallet') paymentVal.textContent = 'eWallet ⚡';
+    else if (pm === 'ipay') paymentVal.textContent = 'iPay (UPI)';
     else if (pm === 'upi') paymentVal.textContent = 'BHIM UPI';
     else if (pm === 'cards') paymentVal.textContent = 'Card Pay';
     else if (pm === 'netbanking') paymentVal.textContent = cfg.bankName || 'NetBank';
-    else paymentVal.textContent = 'iPay';
+    else paymentVal.textContent = 'eWallet ⚡';
   }
 
   if (state && state.clockSynced) {
@@ -353,11 +393,11 @@ function renderPassengerCards() {
       <div class="grouped-field-row">
         <div class="grouped-field" style="flex:2">
           <label>Full Name</label>
-          <input type="text" class="pax-input-name" data-idx="${idx}" value="${p.name || ''}" placeholder="Full Name" spellcheck="false" required>
+          <input type="text" class="pax-input-name" data-idx="${idx}" value="${p.name || ''}" placeholder="Full Name as per Aadhaar / ID" spellcheck="false" required>
         </div>
         <div class="grouped-field" style="flex:1">
           <label>Age</label>
-          <input type="number" class="pax-input-age" data-idx="${idx}" value="${p.age || '30'}" min="1" max="120" required>
+          <input type="number" class="pax-input-age" data-idx="${idx}" value="${p.age || ''}" placeholder="Age" min="1" max="120" required>
         </div>
       </div>
       <div class="group-divider"></div>
@@ -405,7 +445,7 @@ function syncPaxValues() {
   const cards = paxCardsContainer.querySelectorAll('.pax-item-card');
   passengersList = Array.from(cards).map(card => ({
     name: card.querySelector('.pax-input-name')?.value.trim() || '',
-    age: card.querySelector('.pax-input-age')?.value || '30',
+    age: card.querySelector('.pax-input-age')?.value.trim() || '',
     gender: card.querySelector('.pax-input-gender')?.value || 'M',
     nationality: 'IN',
     berthPreference: card.querySelector('.pax-input-berth')?.value || ''
@@ -417,25 +457,18 @@ btnAddPaxCard.addEventListener('click', () => {
     showError('Maximum 4 Tatkal passengers allowed per booking.');
     return;
   }
-  passengersList.push({ name: '', age: '30', gender: 'M', nationality: 'IN', berthPreference: '' });
+  passengersList.push({ name: '', age: '', gender: 'M', nationality: 'IN', berthPreference: '' });
   renderPassengerCards();
 });
 
 /* ── Save Configuration ─────────────────────────────────────────────── */
 
-popupConfigForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  syncPaxValues();
+function extractFormConfig() {
+  const uid = cfgUserId.value.trim() || quickUserId.value.trim();
+  const pwd = cfgPassword.value || quickPassword.value;
 
-  const uid = cfgUserId.value.trim();
-  const pwd = cfgPassword.value;
-
-  quickUserId.value = uid;
-  quickPassword.value = pwd;
-
-  await chrome.storage.local.set({ userId: uid, password: pwd });
-
-  const config = {
+  return {
+    bookingSite:   cfgBookingSite ? cfgBookingSite.value : 'eticket',
     userId:        uid,
     password:      pwd,
     travelDate:    cfgDate.value || getTomorrowDateString(),
@@ -445,18 +478,35 @@ popupConfigForm.addEventListener('submit', async (e) => {
     trainNumber:   cfgTrain.value.trim(),
     paymentMethod: cfgPaymentMethod ? cfgPaymentMethod.value : 'ewallet',
     ewalletPin:    cfgEwalletPin ? cfgEwalletPin.value.trim() : '',
-    upiId:         cfgUpiId.value.trim(),
+    upiId:         cfgUpiId ? cfgUpiId.value.trim() : '',
     bankName:      cfgBankName ? cfgBankName.value : 'SBI',
     cardNumber:    cfgCardNumber ? cfgCardNumber.value.trim() : '',
     cardExpiry:    cfgCardExpiry ? cfgCardExpiry.value.trim() : '',
+    cardName:      cfgCardName ? cfgCardName.value.trim() : '',
+    cardCvv:       cfgCardCvv ? cfgCardCvv.value.trim() : '',
+    bookOnlyIfCnf: cfgBookOnlyIfCnf ? cfgBookOnlyIfCnf.checked : true,
     passengers:    passengersList.filter(p => p.name.length > 0),
     fallbackFrom:  cfgFallbackFrom.value.trim().toUpperCase(),
     fallbackTo:    cfgFallbackTo.value.trim().toUpperCase(),
     dryRun:        cfgDryRun.checked
   };
+}
 
+popupConfigForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  syncPaxValues();
+
+  const config = extractFormConfig();
   currentConfig = config;
-  await chrome.storage.local.set({ config });
+
+  quickUserId.value   = config.userId;
+  quickPassword.value = config.password;
+  await chrome.storage.local.set({ userId: config.userId, password: config.password });
+
+  await chrome.storage.local.set({
+    config,
+    tatkal_config: config
+  });
 
   // Return to monitor view with spatial transition
   configView.className = 'view view-hidden';
@@ -464,7 +514,7 @@ popupConfigForm.addEventListener('submit', async (e) => {
   toggleConfigBtn.style.display = 'inline-flex';
 
   refreshMonitorFromConfig(config);
-  setStatus('ready', 'Configuration Saved', 'Ready to ARM or execute');
+  setStatus('ready', 'Configuration Saved ✓', 'Ready to ARM or execute');
 });
 
 /* ── 1-Click Operations (Direct Execution) ─────────────────────────── */
@@ -733,9 +783,10 @@ chrome.runtime.onMessage.addListener((msg) => {
     case 'CHAIN_COMPLETE':
       clearCountdown();
       if (msg.success) {
-        setStatus('ready', 'Booking Completed ✓', 'Check active tab');
+        setStatus('ready', msg.dryRun ? 'Test Run Completed ✓' : 'Booking Completed ✓', msg.message || 'Check active tab');
       } else {
-        setStatus('error', 'Execution Finished', msg.error || 'Check active tab');
+        setStatus('error', 'Execution Halted', msg.message || msg.error || 'Check active tab');
+        showError(msg.message || msg.error || 'Execution halted. Please review IRCTC tab.');
       }
       setIdleUI();
       break;

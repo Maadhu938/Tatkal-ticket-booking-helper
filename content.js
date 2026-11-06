@@ -120,6 +120,91 @@ function fireInputEvents(el) {
 }
 
 /* ═════════════════════════════════════════════════════════════════════
+ * 0. MODAL INTERRUPT DEFENSE & AKAMAI WAF DETECTION
+ * ═════════════════════════════════════════════════════════════════════ */
+
+function dismissInterruptModals() {
+  let dismissed = 0;
+
+  // 1. Preferred Language dialog ("Welcome to IRCTC / Preferred language")
+  const langDialog = $(SEL.languageDialog);
+  if (langDialog && langDialog.offsetParent !== null) {
+    const text = (langDialog.textContent || '').toLowerCase();
+    if (text.includes('welcome to irctc') || text.includes('preferred language') || text.includes('pnr')) {
+      const engBtn = $(SEL.languageEnglishBtn, langDialog) || Array.from(langDialog.querySelectorAll('button')).find(b => /english/i.test(b.textContent || ''));
+      if (engBtn) {
+        log('Dismissing IRCTC Preferred Language modal…');
+        triggerFullClick(engBtn);
+        dismissed++;
+      }
+    }
+  }
+
+  // 2. Home Tour popup
+  const tourSkip = $(SEL.homeTourSkipBtn) || Array.from(document.querySelectorAll('button, a')).find(b => /skip\s*tour/i.test(b.textContent || ''));
+  if (tourSkip && tourSkip.offsetParent !== null) {
+    log('Dismissing IRCTC Home Tour popup…');
+    triggerFullClick(tourSkip);
+    dismissed++;
+  }
+  const tourElements = document.querySelectorAll('.home-tour-actions, .home-tour, .home-tour-overlay, app-home-tour');
+  for (const el of tourElements) {
+    el.style.setProperty('display', 'none', 'important');
+    dismissed++;
+  }
+
+  // 3. Session Restore overlay
+  const sessionRoots = document.querySelectorAll(SEL.sessionRestoreOverlay);
+  for (const el of sessionRoots) {
+    if (/session\s*restore/i.test(el.textContent || '')) {
+      log('Dismissing Session Restore dialog…');
+      el.style.setProperty('display', 'none', 'important');
+      el.style.setProperty('pointer-events', 'none', 'important');
+      dismissed++;
+    }
+  }
+
+  // 4. High Load Error dialog / toast
+  const highLoadClose = $(SEL.highLoadClose);
+  if (highLoadClose && highLoadClose.offsetParent !== null) {
+    const parent = highLoadClose.closest('.ui-dialog, .p-dialog, .alert, div') || document.body;
+    if (/high\s*load|please\s*retry/i.test(parent.textContent || '')) {
+      log('High Load detected! Auto-dismissing error dialog to trigger instant retry…');
+      triggerFullClick(highLoadClose);
+      dismissed++;
+    }
+  }
+
+  // 5. Akamai WAF detection
+  const bodyText = (document.body ? document.body.textContent : '') || '';
+  if (/unable\s*to\s*process\s*request/i.test(bodyText) && !window._tatkalWafReported) {
+    window._tatkalWafReported = true;
+    const refMatch = bodyText.match(/\b(0\.[0-9a-fA-F]{6,12}\.\d{8,12}\.[0-9a-fA-F]{4,12})\b/);
+    warn('Akamai WAF block encountered:', refMatch ? refMatch[1] : 'Unknown ref');
+  }
+
+  return dismissed;
+}
+
+function initModalObserver() {
+  dismissInterruptModals();
+  const observer = new MutationObserver(() => {
+    dismissInterruptModals();
+  });
+  if (document.documentElement) {
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  } else {
+    document.addEventListener('DOMContentLoaded', () => {
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+    }, { once: true });
+  }
+  setInterval(dismissInterruptModals, 400);
+}
+
+// Start auto-dismissal immediately upon script execution
+initModalObserver();
+
+/* ═════════════════════════════════════════════════════════════════════
  * 1. AUTO LOGIN & BULLETPROOF SIGN-IN CLICK
  * ═════════════════════════════════════════════════════════════════════ */
 
@@ -399,19 +484,48 @@ async function ref_selectPrimeNGDropdown(containerSelector, targetText) {
 async function ref_selectTatkalQuota() {
   log('Attempting to select TATKAL quota…');
 
-  // Strategy A: Dedicated quota dropdown on train-search or train-list
+  // Check if TATKAL is already active anywhere in visible quota labels
+  const existingQuotaLabel = Array.from(document.querySelectorAll('.ui-dropdown-label, .p-dropdown-label, .select-placeholder, div.field-box[aria-label*="Quota" i] span'))
+    .find(el => el.offsetParent !== null && /tatkal/i.test(el.textContent || ''));
+  if (existingQuotaLabel) {
+    log('TATKAL quota is already selected.');
+    return true;
+  }
+
+  // Strategy A: Modern IRCTC (/eticket) div.field-box
+  const fieldBoxes = Array.from(document.querySelectorAll('div.field-box[aria-label*="Quota" i], div.field-box[aria-label="Quota"]'))
+    .filter(el => el.offsetParent !== null);
+  for (const box of fieldBoxes) {
+    triggerFullClick(box);
+    await sleep(200);
+    const quotaOption = await poll(() => {
+      const opts = Array.from(document.querySelectorAll('.custom-dropdown-panel-quota .custom-option, .custom-dropdown-panel .custom-option, .custom-option, [role="listbox"] [role="option"]'))
+        .filter(el => el.offsetParent !== null);
+      return opts.find(o => /tatkal/i.test(o.textContent || ''));
+    }, 2500, 80);
+
+    if (quotaOption) {
+      log('TATKAL Quota selected in modern field-box panel.');
+      triggerFullClick(quotaOption);
+      await sleep(200);
+      return true;
+    }
+  }
+
+  // Strategy B: Classic IRCTC (/nget) Dedicated quota dropdown
   const quotaSelectors = [
     'p-dropdown[formcontrolname="journeyQuota"]',
     '#journeyQuota',
     'p-dropdown#journeyQuota',
     '.search_div p-dropdown',
     'div.pull-right p-dropdown',
-    'p-dropdown[id="journeyQuota"]'
+    'p-dropdown[id="journeyQuota"]',
+    'p-dropdown:has(.fa-id-card-o)'
   ];
 
   for (const sel of quotaSelectors) {
     const el = document.querySelector(sel);
-    if (el) {
+    if (el && el.offsetParent !== null) {
       const success = await ref_selectPrimeNGDropdown(sel, 'TATKAL');
       if (success) {
         log('TATKAL Quota selected via PrimeNG dropdown:', sel);
@@ -420,20 +534,20 @@ async function ref_selectTatkalQuota() {
     }
   }
 
-  // Strategy B: Radio button / direct link fallback
+  // Strategy C: Dropdown label search fallback
   const quotaLabels = $$('label, span, div.ui-dropdown-label, div.p-dropdown-label');
   for (const label of quotaLabels) {
     const txt = (label.textContent || '').trim().toUpperCase();
     if (txt === 'GENERAL' || txt.includes('QUOTA')) {
       const parent = label.closest('p-dropdown') || label.closest('.ui-dropdown');
-      if (parent) {
+      if (parent && parent.offsetParent !== null) {
         const ok = await ref_selectPrimeNGDropdown(parent, 'TATKAL');
         if (ok) return true;
       }
     }
   }
 
-  warn('Could not locate or select TATKAL quota dropdown.');
+  warn('TATKAL quota dropdown not locked immediately (will re-enforce on train-list).');
   return false;
 }
 
@@ -441,11 +555,25 @@ async function ref_selectTatkalQuota() {
  * 4. CLASS SEAT SELECTOR & BOOKING TRIGGER (SL / 3A / 2A / etc.)
  * ═════════════════════════════════════════════════════════════════════ */
 
+function ref_scoreTrainName(cardName, searchName) {
+  const a = String(cardName || '').toLowerCase().replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  const b = String(searchName || '').toLowerCase().replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!b) return 0;
+  if (a === b) return 100;
+  if (a.includes(b) || b.includes(a)) return 80;
+  const wordsA = a.split(' ').filter(Boolean);
+  const wordsB = b.split(' ').filter(Boolean);
+  if (!wordsB.length) return 0;
+  const overlap = wordsB.filter(w => wordsA.some(cw => cw.includes(w) || w.includes(cw))).length;
+  return Math.round((overlap / wordsB.length) * 70);
+}
+
 async function ref_clickClassSeats(targetClass = 'SL', targetTrain = '') {
   log(`Selecting Class "${targetClass}" ${targetTrain ? `for Train ${targetTrain}` : 'for first matching train'}…`);
 
   const upperClass = targetClass.trim().toUpperCase();
-  const cleanTrain = targetTrain ? targetTrain.trim().replace(/[^\d]/g, '') : '';
+  const rawTrain = String(targetTrain || '').trim();
+  const cleanTrainDigits = rawTrain.replace(/[^\d]/g, '');
 
   // Step 1: Locate the train card on train-list
   const trainCards = await poll(() => {
@@ -460,14 +588,30 @@ async function ref_clickClassSeats(targetClass = 'SL', targetTrain = '') {
 
   let matchedCard = null;
 
-  if (cleanTrain) {
+  // Exact number match first
+  if (cleanTrainDigits) {
     for (const card of trainCards) {
       const numEl = $(SEL.trainNumber, card);
       if (numEl) {
         const numText = numEl.textContent.replace(/[^\d]/g, '');
-        if (numText === cleanTrain) {
+        if (numText === cleanTrainDigits) {
           matchedCard = card;
           break;
+        }
+      }
+    }
+  }
+
+  // Fuzzy name match fallback
+  if (!matchedCard && rawTrain) {
+    let bestScore = 0;
+    for (const card of trainCards) {
+      const nameEl = $(SEL.trainName, card) || $(SEL.trainNumber, card);
+      if (nameEl) {
+        const score = ref_scoreTrainName(nameEl.textContent, rawTrain);
+        if (score > bestScore && score >= 40) {
+          bestScore = score;
+          matchedCard = card;
         }
       }
     }
@@ -478,6 +622,15 @@ async function ref_clickClassSeats(targetClass = 'SL', targetTrain = '') {
   }
 
   log('Target train card locked.');
+
+  // Auto-scroll horizontal container if class is not visible
+  const scrollContainers = matchedCard.querySelectorAll('[style*="overflow-x"], .table-responsive, p-tabmenu, .available-classes');
+  for (const sc of scrollContainers) {
+    if (sc.scrollWidth > sc.clientWidth) {
+      sc.scrollLeft += Math.min(220, sc.clientWidth);
+      await sleep(100);
+    }
+  }
 
   // Step 2: Find the class box (e.g. Sleeper (SL), AC 3 Tier (3A)) inside train card
   const classBoxes = $$(SEL.classBox, matchedCard);
@@ -496,11 +649,11 @@ async function ref_clickClassSeats(targetClass = 'SL', targetTrain = '') {
 
   if (!targetBox) {
     // Broad fallback: any element inside card with class label
-    const allLabels = matchedCard.querySelectorAll('strong, span, div');
+    const allLabels = matchedCard.querySelectorAll('strong, span, div, button');
     for (const el of allLabels) {
       const txt = (el.textContent || '').trim().toUpperCase();
       if ((upperClass === 'SL' && (txt.includes('SLEEPER') || txt.includes('(SL)'))) || txt.includes(upperClass)) {
-        targetBox = el.closest('.pre-avl') || el.closest('td') || el;
+        targetBox = el.closest('.pre-avl') || el.closest('.class-card') || el.closest('td') || el;
         break;
       }
     }
@@ -518,7 +671,7 @@ async function ref_clickClassSeats(targetClass = 'SL', targetTrain = '') {
 
   // Step 4: Wait for enquiry loading spinner to clear and availability cells to appear
   await sleep(300);
-  const availCell = await poll(() => {
+  let availCell = await poll(() => {
     // Wait for overlay to vanish
     if ($(SEL.overlay)) return null;
 
@@ -537,6 +690,24 @@ async function ref_clickClassSeats(targetClass = 'SL', targetTrain = '') {
 
     return null;
   }, CLASS_POLL_TIMEOUT, 80);
+
+  // If high-load happened, dismiss and retry once
+  if (!availCell) {
+    const highLoadDismissed = dismissInterruptModals();
+    if (highLoadDismissed > 0) {
+      log('High load modal was dismissed, retrying class box click…');
+      targetBox.click();
+      availCell = await poll(() => {
+        if ($(SEL.overlay)) return null;
+        const cells = $$(SEL.availCell, matchedCard);
+        for (const c of cells) {
+          const txt = (c.textContent || '').toUpperCase();
+          if (txt.includes('AVAILABLE') || txt.includes('CURR_AVBL') || txt.includes('RAC') || txt.includes('WL') || txt.includes('REGRET')) return c;
+        }
+        return null;
+      }, 10_000, 80);
+    }
+  }
 
   if (!availCell) {
     warn('Timed out waiting for availability response from IRCTC.');
@@ -558,7 +729,6 @@ async function ref_clickClassSeats(targetClass = 'SL', targetTrain = '') {
   // Step 5: Click "Book Now" button
   let bookBtn = $(SEL.bookNowBtn, matchedCard) || $(SEL.bookNowBtn);
   if (!bookBtn) {
-    // Some layouts make the availCell itself the trigger
     availCell.click();
   } else {
     log('Clicking "Book Now" button…');
@@ -662,6 +832,89 @@ async function ref_fillSinglePassenger(personData, index) {
   return { success: true };
 }
 
+async function ref_handleExistingPassengerModal(paxList) {
+  const existingBtn = $(SEL.existingModalBtn);
+  if (!existingBtn || existingBtn.offsetParent === null) return 0;
+
+  log('Detected Modern IRCTC "Add Existing Passenger" Master List trigger. Opening…');
+  triggerFullClick(existingBtn);
+
+  const modal = await poll(() => $(SEL.existingModalMask), 4000, 100);
+  if (!modal) {
+    warn('Existing passenger modal did not open.');
+    return 0;
+  }
+
+  await sleep(250);
+  const rows = modal.querySelectorAll('.ep-passenger-row, .ui-grid-row, tr');
+  let matchedCount = 0;
+  const targetNames = paxList.map(p => (typeof p === 'string' ? p : p.name).trim().toUpperCase());
+
+  for (const row of rows) {
+    const nameEl = row.querySelector('.ep-passenger-name, td:first-child, span');
+    if (!nameEl) continue;
+    const nameText = (nameEl.textContent || '').trim().toUpperCase();
+    const matched = targetNames.some(target => nameText.includes(target) || target.includes(nameText));
+    if (matched) {
+      const box = row.querySelector('.ui-chkbox-box, input[type="checkbox"]');
+      if (box && !box.classList.contains('ui-state-active') && !box.checked) {
+        triggerFullClick(box);
+        matchedCount++;
+        await sleep(60);
+      }
+    }
+  }
+
+  if (matchedCount > 0) {
+    const addBtn = modal.querySelector('button.ep-add-btn, button.app-modal-button--primary, button:has-text("Add")') || $(SEL.existingModalAdd);
+    if (addBtn) {
+      log(`Adding ${matchedCount} passenger(s) directly from Master List…`);
+      triggerFullClick(addBtn);
+      await sleep(400);
+      return matchedCount;
+    }
+  }
+
+  // If no match or modal needs close
+  const cancelBtn = modal.querySelector('button.app-modal-button--cancel, button.close, .fa-close');
+  if (cancelBtn) cancelBtn.click();
+  return matchedCount;
+}
+
+async function ref_handleOtherPreferences(cfg) {
+  // 1. "Book only if confirm berths are allotted" (Default true for Tatkal to prevent waitlist loss)
+  const wantConfirmOnly = cfg ? (cfg.bookOnlyIfCnf !== false) : (config ? config.bookOnlyIfCnf !== false : true);
+  if (wantConfirmOnly) {
+    log('Setting preference: "Book only if confirm berths are allotted"…');
+    const header = $(SEL.otherPreferencesHeader);
+    const body = $(SEL.otherPreferencesBody);
+
+    // Expand accordion if not visible
+    const isExpanded = body && (body.classList.contains('show') || body.offsetHeight > 0);
+    if (header && !isExpanded) {
+      triggerFullClick(header);
+      await sleep(250);
+    }
+
+    const cnfBox = $(SEL.bookOnlyIfCnfCheck) || Array.from(document.querySelectorAll('label, span')).find(l => /confirm berths/i.test(l.textContent || ''));
+    if (cnfBox) {
+      const input = cnfBox.tagName.toLowerCase() === 'input' ? cnfBox : cnfBox.querySelector('input') || cnfBox;
+      if (!input.checked) {
+        triggerFullClick(cnfBox);
+        log('"Book only if confirm berths are allotted" selected.');
+      }
+    }
+  }
+
+  // 2. IRCTC Co-Branded Card Loyalty Skip
+  const loyaltySkip = $(SEL.loyaltySkipRadio) || Array.from(document.querySelectorAll('label, .loyalty-option')).find(l => /skip/i.test(l.textContent || ''));
+  if (loyaltySkip) {
+    log('IRCTC Co-Branded Card Benefits prompt detected. Auto-selecting Skip…');
+    triggerFullClick(loyaltySkip);
+    await sleep(100);
+  }
+}
+
 async function ref_fillAllPassengers(paxList) {
   if (!Array.isArray(paxList) || paxList.length === 0) {
     return { success: false, error: 'No passenger details provided.' };
@@ -669,29 +922,32 @@ async function ref_fillAllPassengers(paxList) {
 
   log(`Filling ${paxList.length} passenger details…`);
 
-  // Auto-tick Master List if present
-  const masterRows = $$(SEL.masterListRow);
-  let tickedMasterCount = 0;
+  // Strategy A: Modern /eticket "Add Existing Passenger" modal
+  let tickedMasterCount = await ref_handleExistingPassengerModal(paxList);
 
-  if (masterRows.length > 0) {
-    const targetNames = paxList.map(p => (typeof p === 'string' ? p : p.name).trim().toUpperCase());
-    for (const row of masterRows) {
-      const nameEl = $(SEL.masterListName, row);
-      if (!nameEl) continue;
-      const rowName = nameEl.textContent.trim().toUpperCase();
-      const matched = targetNames.some(target => rowName.includes(target) || target.includes(rowName));
-      if (matched) {
-        const checkbox = $(SEL.masterListCheck, row);
-        if (checkbox) {
-          checkbox.click();
-          tickedMasterCount++;
-          await sleep(60);
+  // Strategy B: Classic /nget Master List table rows if present
+  if (tickedMasterCount === 0) {
+    const masterRows = $$(SEL.masterListRow);
+    if (masterRows.length > 0) {
+      const targetNames = paxList.map(p => (typeof p === 'string' ? p : p.name).trim().toUpperCase());
+      for (const row of masterRows) {
+        const nameEl = $(SEL.masterListName, row);
+        if (!nameEl) continue;
+        const rowName = nameEl.textContent.trim().toUpperCase();
+        const matched = targetNames.some(target => rowName.includes(target) || target.includes(rowName));
+        if (matched) {
+          const checkbox = $(SEL.masterListCheck, row);
+          if (checkbox) {
+            checkbox.click();
+            tickedMasterCount++;
+            await sleep(60);
+          }
         }
       }
     }
   }
 
-  // If Master list was not used or didn't fill all, directly fill app-passenger rows
+  // Strategy C: If Master list was not used or didn't fill all, directly fill app-passenger rows
   if (tickedMasterCount < paxList.length) {
     for (let i = 0; i < paxList.length; i++) {
       const p = paxList[i];
@@ -706,6 +962,9 @@ async function ref_fillAllPassengers(paxList) {
       await sleep(150);
     }
   }
+
+  // Handle Other Preferences & Loyalty Skip
+  await ref_handleOtherPreferences(config);
 
   // Auto-tick Auto Upgradation
   const autoUp = $(SEL.autoUpgradationCheck);
@@ -741,8 +1000,149 @@ async function ref_fillAllPassengers(paxList) {
 }
 
 /* ═════════════════════════════════════════════════════════════════════
- * 6. JOURNEY DETAILS PREFILL (from passenger-CTQjNBJr.js)
+ * 6. JOURNEY DETAILS PREFILL & BULLETPROOF STATION AUTOCOMPLETE
  * ═════════════════════════════════════════════════════════════════════ */
+
+async function ref_fillStation(isOrigin, rawStation) {
+  const station = String(rawStation || '').trim();
+  if (!station) return false;
+
+  const type = isOrigin ? 'From' : 'To';
+  log(`Selecting ${type} station: "${station}"…`);
+
+  // ── STRATEGY 1: Modern IRCTC (/eticket) div.field-box ──
+  const fieldBoxSelector = isOrigin 
+    ? 'div.field-box[aria-label*="From" i], div.field-box[aria-label="From station"], div.field-box[aria-label="From"]'
+    : 'div.field-box[aria-label*="To" i], div.field-box[aria-label="To station"], div.field-box[aria-label="To"]';
+  const fieldBox = document.querySelector(fieldBoxSelector);
+
+  if (fieldBox && fieldBox.offsetParent !== null) {
+    // Check if already selected
+    const placeholder = fieldBox.querySelector('.select-placeholder');
+    if (placeholder && placeholder.classList.contains('has-value')) {
+      const curVal = (placeholder.textContent || '').trim().toUpperCase();
+      if (curVal.includes(station.toUpperCase())) {
+        log(`${type} station already selected in field-box:`, curVal);
+        return true;
+      }
+    }
+
+    // Open field box
+    fieldBox.scrollIntoView({ block: 'center', inline: 'nearest' });
+    triggerFullClick(fieldBox);
+    await sleep(250);
+
+    // Find input in field-box or custom dropdown panel
+    const input = fieldBox.querySelector('input') || document.querySelector('.custom-dropdown-panel .station-search-input, .custom-dropdown-panel input, input.station-search-input');
+    if (input) {
+      input.focus();
+      input.value = station;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent('keyup', { key: station.slice(-1), bubbles: true }));
+      await sleep(350);
+
+      const option = await poll(() => {
+        const opts = Array.from(document.querySelectorAll('.custom-dropdown-panel .custom-option, .custom-option, [role="listbox"] [role="option"]'))
+          .filter(el => el.offsetParent !== null);
+        if (!opts.length) return null;
+        const upper = station.toUpperCase();
+        return opts.find(o => (o.textContent || '').toUpperCase().includes(upper)) || opts[0];
+      }, 5000, 100);
+
+      if (option) {
+        log(`Clicking matching ${type} option in custom panel:`, option.textContent.trim());
+        triggerFullClick(option);
+        await sleep(250);
+        return true;
+      }
+    }
+  }
+
+  // ── STRATEGY 2: Classic IRCTC (/nget) PrimeNG p-autocomplete ──
+  const inputSelectors = isOrigin
+    ? ['p-autocomplete[formcontrolname="origin"] input', 'p-autocomplete#origin input', '#origin input', 'input[placeholder*="From*" i]', 'input[placeholder*="FROM" i]']
+    : ['p-autocomplete[formcontrolname="destination"] input', 'p-autocomplete#destination input', '#destination input', 'input[placeholder*="To*" i]', 'input[placeholder*="TO" i]'];
+
+  let inputEl = null;
+  for (const sel of inputSelectors) {
+    const el = document.querySelector(sel);
+    if (el && el.offsetParent !== null) {
+      inputEl = el;
+      break;
+    }
+  }
+
+  if (inputEl) {
+    inputEl.focus();
+    inputEl.scrollIntoView({ block: 'center', inline: 'nearest' });
+    triggerFullClick(inputEl);
+    await sleep(100);
+
+    // Clear existing value
+    inputEl.value = '';
+    inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+    await sleep(50);
+
+    // Type character by character with keydown & keyup to trigger PrimeNG query
+    for (let i = 0; i < station.length; i++) {
+      const ch = station[i];
+      inputEl.value += ch;
+      inputEl.dispatchEvent(new KeyboardEvent('keydown', { key: ch, bubbles: true }));
+      inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+      inputEl.dispatchEvent(new KeyboardEvent('keyup', { key: ch, bubbles: true }));
+      await sleep(30);
+    }
+
+    // CRITICAL: DO NOT DISPATCH BLUR! Wait for autocomplete suggestions
+    log(`Waiting for PrimeNG ${type} autocomplete dropdown…`);
+    const option = await poll(() => {
+      const panelItems = Array.from(document.querySelectorAll(
+        '.ui-autocomplete-panel li, .p-autocomplete-panel li, ul.ui-autocomplete-items li, li.ui-autocomplete-list-item'
+      )).filter(li => {
+        if (li.offsetParent === null) return false;
+        const txt = (li.textContent || '').trim();
+        // Ignore separator or header items
+        if (!txt || /^-+$/.test(txt) || /stations/i.test(txt) || /journeys/i.test(txt)) return false;
+        return true;
+      });
+
+      if (!panelItems.length) return null;
+
+      const upper = station.toUpperCase();
+      // Match " - CODE" or "(CODE)" or full text
+      const match = panelItems.find(li => {
+        const t = (li.textContent || '').toUpperCase();
+        return t.includes(` - ${upper}`) || t.includes(`(${upper})`) || t.includes(upper);
+      });
+
+      return match || panelItems[0];
+    }, 6000, 100);
+
+    if (option) {
+      log(`Selecting ${type} option:`, option.textContent.trim());
+      // PrimeNG listens to mousedown & click on the li item
+      option.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+      option.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+      option.click();
+      await sleep(300);
+      return true;
+    } else {
+      // Space fallback to trigger query
+      inputEl.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true }));
+      inputEl.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space', bubbles: true }));
+      await sleep(350);
+      const fallbackOpt = document.querySelector('.ui-autocomplete-panel li, .p-autocomplete-panel li');
+      if (fallbackOpt) {
+        fallbackOpt.click();
+        await sleep(250);
+        return true;
+      }
+    }
+  }
+
+  warn(`Could not select ${type} station: "${station}"`);
+  return false;
+}
 
 async function ref_fillJourneyDetails(journey) {
   log('Prefilling journey details…');
@@ -750,46 +1150,30 @@ async function ref_fillJourneyDetails(journey) {
   const from = journey.fromStation || journey.from || '';
   const to = journey.toStation || journey.to || '';
 
-  // Origin
-  if (from) {
-    const originInput = await ref_typeWithKeyboard(
-      ['p-autocomplete[formcontrolname="origin"] input', '#origin input', 'input[placeholder*="From*"]'],
-      from
-    );
-    if (originInput) {
-      await sleep(100);
-      const matched = await ref_findAndClickOption(from);
-      if (!matched) {
-        // Space key trigger fallback
-        ref_createKeyEvents(' ', 'Space', originInput.dispatchEvent.bind(originInput));
-        await sleep(200);
-        await ref_findAndClickOption(from, true);
-      }
-    }
+  if (!from) {
+    warn('From station is empty.');
+    return { success: false, error: 'Origin (From) station is required. Please set in Settings.' };
+  }
+  if (!to) {
+    warn('To station is empty.');
+    return { success: false, error: 'Destination (To) station is required. Please set in Settings.' };
   }
 
-  await sleep(100);
-
-  // Destination
-  if (to) {
-    const destInput = await ref_typeWithKeyboard(
-      ['p-autocomplete[formcontrolname="destination"] input', '#destination input', 'input[placeholder*="To*"]'],
-      to
-    );
-    if (destInput) {
-      await sleep(100);
-      const matched = await ref_findAndClickOption(to);
-      if (!matched) {
-        ref_createKeyEvents(' ', 'Space', destInput.dispatchEvent.bind(destInput));
-        await sleep(200);
-        await ref_findAndClickOption(to, true);
-      }
-    }
+  // 1. Origin Station
+  const fromOk = await ref_fillStation(true, from);
+  if (!fromOk) {
+    return { success: false, error: `Could not select From station: "${from}". Please verify station code.` };
   }
+  await sleep(200);
 
-  await sleep(100);
+  // 2. Destination Station
+  const toOk = await ref_fillStation(false, to);
+  if (!toOk) {
+    return { success: false, error: `Could not select To station: "${to}". Please verify station code.` };
+  }
+  await sleep(200);
 
-  // Date: Tatkal Quota is STRICTLY for TOMORROW'S Journey
+  // 3. Date: Tatkal Quota is STRICTLY for TOMORROW'S Journey
   const today = new Date();
   const todayISO = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
@@ -833,7 +1217,7 @@ async function ref_fillJourneyDetails(journey) {
     }
   }
 
-  // Class & Quota
+  // 4. Class & Quota
   if (journey.journeyClass || journey.class) {
     await ref_selectPrimeNGDropdown(SEL.classDropdown, journey.journeyClass || journey.class);
   }
@@ -1024,8 +1408,8 @@ async function ref_autoFillCurrentPage(cfg = {}) {
   const url = window.location.href;
   log('Auto-filling current page:', url);
 
-  // 1. Search Page
-  if (url.includes('train-search') || url.endsWith('.irctc.co.in/nget/') || url.includes('/home')) {
+  // 1. Search Page (Both Classic nget and Beta eticket)
+  if (url.includes('train-search') || (url.includes('/eticket') && !url.includes('booking')) || url.endsWith('.irctc.co.in/nget/') || url.includes('/home')) {
     log('Automating Train Search Page…');
     await ref_fillJourneyDetails(cfg);
     await sleep(250);
@@ -1047,15 +1431,15 @@ async function ref_autoFillCurrentPage(cfg = {}) {
     return { success: res.success, stage: 'Seat Selection', error: res.error };
   }
 
-  // 3. Passenger Details Page
-  if (url.includes('psgninput')) {
+  // 3. Passenger Details Page (Both Classic nget /psgninput and Beta eticket /booking/passenger-input)
+  if (url.includes('psgninput') || url.includes('passenger-input') || url.includes('/passenger')) {
     log('Automating Passenger Details Page…');
     const res = await ref_fillAllPassengers(cfg.passengers || []);
     return { success: res.success, stage: 'Passengers Filled', error: res.error };
   }
 
   // 4. Captcha / Review Page
-  if (url.includes('review') || url.includes('captcha') || $('app-captcha')) {
+  if (url.includes('review') || url.includes('reviewBooking') || url.includes('captcha') || $('app-captcha')) {
     log('On Review / Captcha Page…');
     playCaptchaCue();
     const captcha = $(SEL.captchaInput);
@@ -1071,8 +1455,8 @@ async function ref_autoFillCurrentPage(cfg = {}) {
     return { success: true, stage: 'Review Ready' };
   }
 
-  // 5. Payment Page
-  if (url.includes('payment') || url.includes('bkgpayment') || $('app-payment')) {
+  // 5. Payment Page (Both Classic nget /bkgpayment and Beta eticket /bkgPaymentOptions)
+  if (url.includes('payment') || url.includes('bkgPaymentOptions') || url.includes('bkgpayment') || $('app-payment')) {
     log('Automating Payment Page…');
     const res = await ref_executePayment({ method: cfg.paymentMethod || 'ipay', upiId: cfg.upiId || '' });
     return { success: res.success, stage: 'Payment Selected', message: res.message };
@@ -1328,10 +1712,13 @@ function injectHUD(isLive) {
         background: rgba(255, 77, 77, 0.15);
       }
     </style>
-    <div class="hud-top-bar">
-      <div class="hud-pill">
-        <span class="hud-dot"></span>
-        <span>${isLive ? 'LIVE TATKAL ARMED' : 'TEST ENGINE'}</span>
+    <div class="hud-top-bar" id="tatkal-hud-topbar" style="cursor: grab;" title="Click and drag to move clock">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="opacity:0.4;font-size:12px;letter-spacing:1px;user-select:none;">⠿</span>
+        <div class="hud-pill">
+          <span class="hud-dot"></span>
+          <span>${isLive ? 'LIVE TATKAL ARMED' : 'TEST ENGINE'}</span>
+        </div>
       </div>
       <button id="tatkal-hud-abort" class="hud-btn danger" style="flex:0;padding:2px 8px">ABORT</button>
     </div>
@@ -1356,6 +1743,49 @@ function injectHUD(isLive) {
   `;
 
   document.body.appendChild(hudElement);
+
+  // Make HUD Movable (Draggable)
+  const topBar = document.getElementById('tatkal-hud-topbar');
+  if (topBar) {
+    let isDragging = false;
+    let startX = 0, startY = 0, initialLeft = 0, initialTop = 0;
+
+    topBar.addEventListener('mousedown', (e) => {
+      if (e.target.closest('button')) return; // ignore clicks on buttons
+      isDragging = true;
+      topBar.style.cursor = 'grabbing';
+
+      const rect = hudElement.getBoundingClientRect();
+      initialLeft = rect.left;
+      initialTop = rect.top;
+      startX = e.clientX;
+      startY = e.clientY;
+
+      hudElement.style.right = 'auto';
+      hudElement.style.left = `${initialLeft}px`;
+      hudElement.style.top = `${initialTop}px`;
+
+      const onMouseMove = (ev) => {
+        if (!isDragging) return;
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        const newLeft = Math.max(8, Math.min(window.innerWidth - hudElement.offsetWidth - 8, initialLeft + dx));
+        const newTop = Math.max(8, Math.min(window.innerHeight - hudElement.offsetHeight - 8, initialTop + dy));
+        hudElement.style.left = `${newLeft}px`;
+        hudElement.style.top = `${newTop}px`;
+      };
+
+      const onMouseUp = () => {
+        isDragging = false;
+        topBar.style.cursor = 'grab';
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+      };
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    });
+  }
 
   document.getElementById('tatkal-hud-abort')?.addEventListener('click', () => {
     stopChain();
@@ -1494,7 +1924,7 @@ function waitUntil(target) {
 }
 
 /* ═════════════════════════════════════════════════════════════════════
- * 11. COMPLETE BOOKING CHAIN
+ * 11. COMPLETE SYNCHRONIZED BOOKING CHAIN
  * ═════════════════════════════════════════════════════════════════════ */
 
 async function runChain(cfg, target, isDryRun, fallback = false, runImmediate = false) {
@@ -1521,8 +1951,8 @@ async function runChain(cfg, target, isDryRun, fallback = false, runImmediate = 
     const currentUrl = window.location.href;
 
     // SCENARIO A: Already on passenger input page
-    if (currentUrl.includes('psgninput')) {
-      log('Detected passenger input page; running passenger filling directly.');
+    if (currentUrl.includes('psgninput') || currentUrl.includes('passenger-input') || currentUrl.includes('/passenger')) {
+      log('Detected passenger input page; running passenger sequence directly.');
       await stagePassengers(cfg);
       if (chainAborted) throw abort();
       await stageCaptcha();
@@ -1558,12 +1988,33 @@ async function runChain(cfg, target, isDryRun, fallback = false, runImmediate = 
     } else {
       log('Firing train search immediately…');
       const btn = $(SEL.searchBtn);
-      if (btn) btn.click();
+      if (btn) {
+        triggerFullClick(btn);
+      } else {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      }
       recordStage('search_fired');
+
+      // Crucial: Wait for page navigation to train-list
+      log('Waiting for train results page navigation…');
+      const listLoaded = await poll(() => {
+        if (window.location.href.includes('train-list')) return true;
+        if ($$(SEL.trainRow).length > 0) return true;
+        const alertEl = document.querySelector('.ui-messages-error, .alert-danger, .ui-toast-detail, .p-toast-detail');
+        if (alertEl && alertEl.offsetParent !== null) {
+          const txt = (alertEl.textContent || '').trim();
+          if (txt) throw new Error(txt);
+        }
+        return null;
+      }, 20_000, 150);
+
+      if (!listLoaded) {
+        throw new Error('Search submitted, but train list did not load within 20s.');
+      }
     }
     if (chainAborted) throw abort();
 
-    /* Stage 3: Class Selection */
+    /* Stage 3: Class Selection on Train List */
     await stageSelectClass(cfg);
     if (chainAborted) throw abort();
 
@@ -1584,7 +2035,9 @@ async function runChain(cfg, target, isDryRun, fallback = false, runImmediate = 
     chrome.runtime.sendMessage({
       type: 'CHAIN_COMPLETE',
       success: true,
+      dryRun: isDryRun,
       timings: serializeTimings(),
+      message: isDryRun ? 'Dry run completed safely before payment.' : 'Tatkal booking completed successfully!'
     }).catch(() => {});
 
     setTimeout(removeHUD, 6000);
@@ -1592,8 +2045,14 @@ async function runChain(cfg, target, isDryRun, fallback = false, runImmediate = 
   } catch (e) {
     if (e.message === 'ABORTED') {
       log('Execution aborted.');
+      chrome.runtime.sendMessage({
+        type: 'CHAIN_COMPLETE',
+        success: false,
+        error: 'ABORTED',
+        message: 'Booking sequence aborted by user.'
+      }).catch(() => {});
     } else if (e.message === 'REGRET') {
-      warn('REGRET encountered.');
+      warn('REGRET encountered in Tatkal quota.');
       recordStage('regret');
 
       if (!isFallback && cfg.fallbackFrom && cfg.fallbackTo) {
@@ -1614,9 +2073,16 @@ async function runChain(cfg, target, isDryRun, fallback = false, runImmediate = 
         type: 'CHAIN_COMPLETE',
         success: false,
         error: 'REGRET',
+        message: 'Tatkal quota exhausted (REGRET) for selected train/class.'
       }).catch(() => {});
     } else {
-      warn('Chain failed:', e);
+      warn('Chain failed with error:', e.message);
+      chrome.runtime.sendMessage({
+        type: 'CHAIN_COMPLETE',
+        success: false,
+        error: e.message || 'Execution error',
+        message: e.message || 'Booking halted. Please review IRCTC tab.'
+      }).catch(() => {});
     }
   } finally {
     chainActive = false;
@@ -1638,7 +2104,10 @@ function serializeTimings() {
 
 async function stagePrefill(cfg) {
   recordStage('prefill_start');
-  await ref_fillJourneyDetails(cfg);
+  const res = await ref_fillJourneyDetails(cfg);
+  if (!res || !res.success) {
+    throw new Error(res?.error || 'Journey prefill failed. Please verify From/To station codes.');
+  }
   recordStage('prefill_done');
 }
 
@@ -1649,42 +2118,109 @@ async function stageFireSearch(target) {
 
   const btn = $(SEL.searchBtn);
   if (btn) {
-    btn.click();
+    triggerFullClick(btn);
     recordStage('search_fired');
     log('Search fired at target instant!');
   } else {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     recordStage('search_fired');
   }
+
+  // Wait for navigation to train-list
+  log('Holding until train results page renders…');
+  const listLoaded = await poll(() => {
+    if (window.location.href.includes('train-list')) return true;
+    if ($$(SEL.trainRow).length > 0) return true;
+    const alertEl = document.querySelector('.ui-messages-error, .alert-danger, .ui-toast-detail, .p-toast-detail');
+    if (alertEl && alertEl.offsetParent !== null) {
+      const txt = (alertEl.textContent || '').trim();
+      if (txt) throw new Error(txt);
+    }
+    return null;
+  }, 20_000, 150);
+
+  if (!listLoaded) {
+    throw new Error('Search fired, but train list did not load within 20s.');
+  }
 }
 
 async function stageSelectClass(cfg) {
   recordStage('waiting_for_results');
+
+  // Re-verify TATKAL quota on train-list
+  await ref_selectTatkalQuota();
+  await sleep(300);
+
   const res = await ref_clickClassSeats(cfg.journeyClass || 'SL', cfg.trainNumber || '');
   if (!res.success) {
     if (res.regret) throw new Error('REGRET');
-    throw new Error(res.error || 'Class selection failed');
+    throw new Error(res.error || 'Class selection failed on train list');
   }
   recordStage('cell_clicked');
-  await sleep(400);
+
+  // Wait for navigation to passenger page
+  log('Holding until passenger details page loads…');
+  const paxLoaded = await poll(() => {
+    const cur = window.location.href;
+    if (cur.includes('psgninput') || cur.includes('passenger-input') || cur.includes('/passenger')) return true;
+    if ($(SEL.masterListRow) || $(SEL.passengerRow) || $(SEL.existingModalBtn)) return true;
+    return null;
+  }, 22_000, 150);
+
+  if (!paxLoaded) {
+    throw new Error('Timed out waiting for Passenger details page. Check if IRCTC login prompt is open.');
+  }
 }
 
 async function stagePassengers(cfg) {
   recordStage('ticking_passengers');
-  await poll(() => $(SEL.masterListRow) || $(SEL.passengerRow) || window.location.href.includes('psgninput'), 12_000);
-  await sleep(350);
+
+  // Wait for passenger elements to be interactive
+  await poll(() => $(SEL.masterListRow) || $(SEL.passengerRow) || $(SEL.existingModalBtn) || window.location.href.includes('psgninput'), 15_000, 100);
+  await sleep(400);
 
   if (cfg.passengers && cfg.passengers.length > 0) {
-    await ref_fillAllPassengers(cfg.passengers);
+    const paxRes = await ref_fillAllPassengers(cfg.passengers);
+    if (paxRes && !paxRes.success) {
+      warn('Passenger autofill warning:', paxRes.error);
+    }
   }
   recordStage('pax_ticked');
+
+  // Modern IRCTC Calculate Fare step if present
+  const calcFareBtn = $(SEL.calculateFareBtn);
+  if (calcFareBtn && calcFareBtn.offsetParent !== null && !calcFareBtn.disabled) {
+    log('Clicking "Calculate Fare" button…');
+    calcFareBtn.click();
+    await sleep(400);
+  }
 
   // Click continue button on passenger input page
   await sleep(200);
   const continueBtn = $(SEL.paxContinueBtn);
   if (continueBtn) {
     log('Clicking Continue on Passenger Details page…');
-    continueBtn.click();
+    triggerFullClick(continueBtn);
+  }
+
+  // Modern Review confirmation popup (Continue to payment)
+  await sleep(400);
+  const reviewContinue = $(SEL.reviewConfirmContinue) || $(SEL.confirmDialogYes);
+  if (reviewContinue && reviewContinue.offsetParent !== null) {
+    log('Review confirmation dialog detected, clicking Continue…');
+    triggerFullClick(reviewContinue);
+  }
+
+  // Wait for Review / Captcha page
+  log('Holding until Review & Captcha page loads…');
+  const reviewLoaded = await poll(() => {
+    const cur = window.location.href;
+    if (cur.includes('review') || cur.includes('reviewBooking') || cur.includes('captcha') || $(SEL.captchaInput)) return true;
+    return null;
+  }, 20_000, 150);
+
+  if (!reviewLoaded) {
+    throw new Error('Passenger submission sent, but Review page did not load.');
   }
 }
 
@@ -1766,16 +2302,25 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       ref_fillJourneyDetails(msg.journeyData || msg.config || {}).then(sendResponse);
       return true;
 
-    case 'CHECK_PAGE':
+    case 'CHECK_PAGE': {
+      const u = window.location.href;
+      const path = window.location.pathname;
+      const isEticket = path.includes('/eticket');
+      const isNget = path.includes('/nget');
+
       sendResponse({
         success: true,
-        url: window.location.href,
-        isSearchPage: window.location.href.includes('train-search'),
-        isTrainListPage: window.location.href.includes('train-list'),
-        isPassengerPage: window.location.href.includes('psgninput'),
-        hasLoginModal: $(SEL.loginUserId) !== null
+        url: u,
+        portal: isEticket ? 'eticket' : (isNget ? 'nget' : 'irctc'),
+        isSearchPage: u.includes('train-search') || path.endsWith('/eticket') || path.endsWith('/nget') || path.endsWith('/home'),
+        isTrainListPage: u.includes('train-list'),
+        isPassengerPage: u.includes('psgninput') || u.includes('passenger-input') || u.includes('passenger'),
+        isReviewPage: u.includes('review') || u.includes('reviewBooking') || $('app-captcha') !== null,
+        isPaymentPage: u.includes('payment') || u.includes('bkgPaymentOptions') || u.includes('bkgpayment'),
+        hasLoginModal: $(SEL.loginUserId) !== null || $(SEL.loginDialog) !== null
       });
       return false;
+    }
 
     /* ── Full Booking Chain ──────────────────────────────── */
 
